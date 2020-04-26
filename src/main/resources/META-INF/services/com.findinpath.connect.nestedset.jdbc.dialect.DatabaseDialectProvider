@@ -1,0 +1,2 @@
+com.findinpath.connect.nestedset.jdbc.dialect.GenericDatabaseDialect$Provider
+com.findinpath.connect.nestedset.jdbc.dialect.SqliteDatabaseDialect$Provider

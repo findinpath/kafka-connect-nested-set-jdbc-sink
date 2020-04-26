@@ -1,0 +1,17 @@
+
+
+  +--------+----------+---------+-------+
+  | parent |   title  |   left  | right |
+  +--------+----------+---------+-------+
+  |        |   Food   |     1   |   18  |
+  | Food   |   Fruit  |     2   |   11  |
+  | Fruit  |   Red    |     3   |    6  |
+  | Red    |   Cherry |     4   |    5  |
+  | Fruit  |   Yellow |     7   |   10  |
+  | Yellow |   Banana |     8   |    9  |
+  | Food   |   Meat   |    12   |   17  |
+  | Meat   |   Beef   |    13   |   14  |
+  | Meat   |   Pork   |    15   |   16  |
+  +--------+----------+---------+-------+
+
+

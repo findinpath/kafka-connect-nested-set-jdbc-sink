@@ -1,0 +1,13 @@
+The following libraries are included in packaged versions of this project:
+
+* Confluent Kafka Connect JDBC
+ * DISCLOSURE: Large parts of the codebase of this component are based on the source code
+ *             from https://github.com/confluentinc/kafka-connect-jdbc
+ * COPYRIGHT: Copyright 2018-2020 Confluent Inc.
+ * LICENSE: licenses/LICENSE.confluentcommunity.txt
+ * HOMEPAGE: https://confluent.io/
+
+* SLF4J
+ * COPYRIGHT: Copyright (c) 2004-2013 QOS.ch
+ * LICENSE: licenses/LICENSE.mit.txt
+ * HOMEPAGE: http://www.slf4j.org/
