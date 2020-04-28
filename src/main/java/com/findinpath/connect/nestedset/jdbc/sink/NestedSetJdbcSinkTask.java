@@ -36,6 +36,9 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   DatabaseDialect dialect;
   JdbcSinkConfig config;
   JdbcDbWriter writer;
+  AsyncSquashingExecutor asyncSquashingExecutor;
+  NestedSetSynchronizer nestedSetSynchronizer;
+
   int remainingRetries;
 
   @Override
@@ -44,6 +47,8 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     config = new JdbcSinkConfig(props);
     initWriter();
     remainingRetries = config.maxRetries;
+    asyncSquashingExecutor = new AsyncSquashingExecutor();
+    nestedSetSynchronizer = new NestedSetSynchronizer();
   }
 
   void initWriter() {
@@ -92,6 +97,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         throw new RetriableException(new SQLException(sqleAllMessages));
       }
     }
+    asyncSquashingExecutor.execute(()-> nestedSetSynchronizer.synchronize());
     remainingRetries = config.maxRetries;
   }
 

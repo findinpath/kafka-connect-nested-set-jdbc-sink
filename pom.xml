@@ -29,6 +29,10 @@
     <slf4j-api.version>${slf4j.version}</slf4j-api.version>
     <slf4j.version>1.7.30</slf4j.version>
     <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
+
+    <junit.version>5.6.1</junit.version>
+    <hamcrest.version>2.2</hamcrest.version>
+    <awaitility.version>4.0.2</awaitility.version>
   </properties>
 
 
@@ -51,6 +55,25 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>${slf4j.version}</version>
+    </dependency>
+
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <version>${hamcrest.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>${awaitility.version}</version>
     </dependency>
   </dependencies>
 
