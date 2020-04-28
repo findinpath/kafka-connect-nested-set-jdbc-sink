@@ -22,6 +22,7 @@ import com.findinpath.connect.nestedset.jdbc.util.ExpressionBuilder;
 import com.findinpath.connect.nestedset.jdbc.util.IdentifierRules;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -95,6 +96,25 @@ public class SqliteDatabaseDialect extends GenericDatabaseDialect {
       default:
         return super.getSqlType(field);
     }
+  }
+
+  @Override
+  public List<String> buildCreateLogTableStatements(
+          TableId table,
+          String primaryKeyColumnName,
+          Collection<SinkRecordField> fields
+  ) {
+    ExpressionBuilder builder = expressionBuilder();
+
+    builder.append("CREATE TABLE ");
+    builder.append(table);
+    builder.append(" (");
+    builder.appendColumnName(primaryKeyColumnName);
+    builder.append(" ");
+    builder.append("INTEGER PRIMARY KEY AUTOINCREMENT,");
+    writeColumnsSpec(builder, fields);
+    builder.append(")");
+    return Arrays.asList(builder.toString());
   }
 
   @Override

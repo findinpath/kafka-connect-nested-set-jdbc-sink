@@ -375,6 +375,18 @@ public interface DatabaseDialect extends ConnectionProvider {
   String buildCreateTableStatement(TableId table, Collection<SinkRecordField> fields);
 
   /**
+   * Build the CREATE TABLE statement(s) expression for the given nested set log table and its columns.
+   * NOTE that in some databases (e.g. : Oracle) there may be needed more statements for creating
+   * the log table with an autoincrement primary key field.
+   *
+   * @param table  the identifier of the nested set log table; may not be null
+   * @param primaryKeyColumnName the name used for the primary key column in the log table.
+   * @param fields the information about the fields in the sink records; may not be null
+   * @return the statements needed for creating the log table; may not be null
+   */
+  List<String> buildCreateLogTableStatements(TableId table, String primaryKeyColumnName, Collection<SinkRecordField> fields);
+
+  /**
    * Build the ALTER TABLE statement expression for the given table and its columns.
    *
    * @param table  the identifier of the table; may not be null

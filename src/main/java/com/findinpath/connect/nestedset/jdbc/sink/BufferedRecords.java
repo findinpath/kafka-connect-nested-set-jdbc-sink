@@ -45,6 +45,7 @@ public class BufferedRecords {
 			.getLogger(BufferedRecords.class);
 
   private final TableId tableId;
+  private final TableId logTableId;
   private final JdbcSinkConfig config;
   private final DatabaseDialect dbDialect;
   private final DbStructure dbStructure;
@@ -63,11 +64,13 @@ public class BufferedRecords {
   public BufferedRecords(
       JdbcSinkConfig config,
       TableId tableId,
+      TableId logTableId,
       DatabaseDialect dbDialect,
       DbStructure dbStructure,
       Connection connection
   ) {
     this.tableId = tableId;
+    this.logTableId = logTableId;
     this.config = config;
     this.dbDialect = dbDialect;
     this.dbStructure = dbStructure;
@@ -119,6 +122,7 @@ public class BufferedRecords {
           config,
           connection,
           tableId,
+          logTableId,
           fieldsMetadata
       );
       final String insertSql = getInsertSql();
@@ -254,7 +258,7 @@ public class BufferedRecords {
 
   private String getInsertSql() {
     return dbDialect.buildInsertStatement(
-        tableId,
+        logTableId,
         asColumns(fieldsMetadata.keyFieldNames),
         asColumns(fieldsMetadata.nonKeyFieldNames)
     );
@@ -291,7 +295,7 @@ public class BufferedRecords {
 
   private Collection<ColumnId> asColumns(Collection<String> names) {
     return names.stream()
-        .map(name -> new ColumnId(tableId, name))
+        .map(name -> new ColumnId(logTableId, name))
         .collect(Collectors.toList());
   }
 }

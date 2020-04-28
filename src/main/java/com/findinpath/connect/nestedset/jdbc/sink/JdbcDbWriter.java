@@ -57,9 +57,10 @@ public class JdbcDbWriter {
     final Map<TableId, BufferedRecords> bufferByTable = new HashMap<>();
     for (SinkRecord record : records) {
       final TableId tableId = destinationTable(record.topic());
+      final TableId logTableId = destinationLogTable(record.topic());
       BufferedRecords buffer = bufferByTable.get(tableId);
       if (buffer == null) {
-        buffer = new BufferedRecords(config, tableId, dbDialect, dbStructure, connection);
+        buffer = new BufferedRecords(config, tableId, logTableId, dbDialect, dbStructure, connection);
         bufferByTable.put(tableId, buffer);
       }
       buffer.add(record);
@@ -85,6 +86,18 @@ public class JdbcDbWriter {
           "Destination table name for topic '%s' is empty using the format string '%s'",
           topic,
           config.tableNameFormat
+      ));
+    }
+    return dbDialect.parseTableIdentifier(tableName);
+  }
+
+  TableId destinationLogTable(String topic) {
+    final String tableName = config.logTableNameFormat.replace("${topic}", topic);
+    if (tableName.isEmpty()) {
+      throw new ConnectException(String.format(
+              "Destination log table name for topic '%s' is empty using the format string '%s'",
+              topic,
+              config.logTableNameFormat
       ));
     }
     return dbDialect.parseTableIdentifier(tableName);

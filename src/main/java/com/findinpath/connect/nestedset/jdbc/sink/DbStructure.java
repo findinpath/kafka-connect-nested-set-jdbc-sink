@@ -53,31 +53,26 @@ public class DbStructure {
       final JdbcSinkConfig config,
       final Connection connection,
       final TableId tableId,
+      final TableId logTableId,
       final FieldsMetadata fieldsMetadata
   ) throws SQLException {
+    if (tableDefns.get(connection, logTableId) == null) {
+      // Table does not yet exist, so attempt to create it ...
+      createLogTable(config, connection, logTableId, fieldsMetadata);
+    }
     if (tableDefns.get(connection, tableId) == null) {
       // Table does not yet exist, so attempt to create it ...
-      try {
-        create(config, connection, tableId, fieldsMetadata);
-      } catch (SQLException sqle) {
-        log.warn("Create failed, will attempt amend if table already exists", sqle);
-        try {
-          TableDefinition newDefn = tableDefns.refresh(connection, tableId);
-          if (newDefn == null) {
-            throw sqle;
-          }
-        } catch (SQLException e) {
-          throw sqle;
-        }
-      }
+      createTable(config, connection, tableId, fieldsMetadata);
     }
-    return amendIfNecessary(config, connection, tableId, fieldsMetadata, config.maxRetries);
+
+    return amendIfNecessary(config, connection, tableId, fieldsMetadata, config.maxRetries)
+            && amendIfNecessary(config, connection, logTableId, fieldsMetadata, config.maxRetries);
   }
 
   /**
    * @throws SQLException if CREATE failed
    */
-  void create(
+  void createTable(
       final JdbcSinkConfig config,
       final Connection connection,
       final TableId tableId,
@@ -88,9 +83,51 @@ public class DbStructure {
           String.format("Table %s is missing and auto-creation is disabled", tableId)
       );
     }
-    String sql = dbDialect.buildCreateTableStatement(tableId, fieldsMetadata.allFields.values());
-    log.info("Creating table with sql: {}", sql);
-    dbDialect.applyDdlStatements(connection, Collections.singletonList(sql));
+    try{
+      String sql = dbDialect.buildCreateTableStatement(tableId, fieldsMetadata.allFields.values());
+      log.info("Creating table with sql: {}", sql);
+      dbDialect.applyDdlStatements(connection, Collections.singletonList(sql));
+    } catch (SQLException sqle) {
+      log.warn("Create failed, will attempt amend if table already exists", sqle);
+      try {
+        TableDefinition newDefn = tableDefns.refresh(connection, tableId);
+        if (newDefn == null) {
+          throw sqle;
+        }
+      } catch (SQLException e) {
+        throw sqle;
+      }
+    }
+  }
+
+  void createLogTable(
+          final JdbcSinkConfig config,
+          final Connection connection,
+          final TableId tableId,
+          final FieldsMetadata fieldsMetadata
+  ) throws SQLException {
+    if (!config.autoCreate) {
+      throw new ConnectException(
+              String.format("Table %s is missing and auto-creation is disabled", tableId)
+      );
+    }
+    try {
+      List<String> sql = dbDialect.buildCreateLogTableStatements(tableId,
+              config.logTablePrimaryKeyColumnName,
+              fieldsMetadata.allFields.values());
+      log.info("Creating table with sql: {}", sql);
+      dbDialect.applyDdlStatements(connection, sql);
+    } catch (SQLException sqle) {
+      log.warn("Create failed for the table {}, will attempt amend if table already exists", tableId, sqle);
+      try {
+        TableDefinition newDefn = tableDefns.refresh(connection, tableId);
+        if (newDefn == null) {
+          throw sqle;
+        }
+      } catch (SQLException e) {
+        throw sqle;
+      }
+    }
   }
 
   /**

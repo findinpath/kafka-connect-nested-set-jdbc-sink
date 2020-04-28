@@ -102,9 +102,24 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String TABLE_NAME_FORMAT_DOC =
       "A format string for the destination table name, which may contain '${topic}' as a "
       + "placeholder for the originating topic name.\n"
-      + "For example, ``kafka_${topic}`` for the topic 'orders' will map to the table name "
-      + "'kafka_orders'.";
+      + "For example, ``kafka_${topic}`` for the topic 'categories' will map to the table name "
+      + "'kafka_categories'.";
   private static final String TABLE_NAME_FORMAT_DISPLAY = "Table Name Format";
+
+  public static final String LOG_TABLE_NAME_FORMAT = "log.table.name.format";
+  private static final String LOG_TABLE_NAME_FORMAT_DEFAULT = "${topic}_log";
+  private static final String LOG_TABLE_NAME_FORMAT_DOC =
+          "A format string for the destination log table name, which may contain '${topic}' as a "
+                  + "placeholder for the originating topic name.\n"
+                  + "For example, ``kafka_${topic}_log`` for the topic 'categories' will map to the table name "
+                  + "'kafka_categories_log'.";
+  private static final String LOG_TABLE_NAME_FORMAT_DISPLAY = "Log Table Name Format";
+
+  public static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME = "log.table.primary.key.column.name";
+  private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT = "log_id";
+  private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC =
+          "The column name identifier for the autoincremented primary key in the log table";
+  private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY = "Log Table Primary Key Column Name";
 
   public static final String MAX_RETRIES = "max.retries";
   private static final int MAX_RETRIES_DEFAULT = 10;
@@ -358,6 +373,17 @@ public class JdbcSinkConfig extends AbstractConfig {
             TABLE_NAME_FORMAT_DISPLAY
         )
         .define(
+                LOG_TABLE_NAME_FORMAT,
+                ConfigDef.Type.STRING,
+                LOG_TABLE_NAME_FORMAT_DEFAULT,
+                ConfigDef.Importance.MEDIUM,
+                LOG_TABLE_NAME_FORMAT_DOC,
+                DATAMAPPING_GROUP,
+                2,
+                ConfigDef.Width.LONG,
+                LOG_TABLE_NAME_FORMAT_DISPLAY
+        )
+        .define(
             PK_MODE,
             ConfigDef.Type.STRING,
             PK_MODE_DEFAULT,
@@ -365,7 +391,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             PK_MODE_DOC,
             DATAMAPPING_GROUP,
-            2,
+            3,
             ConfigDef.Width.MEDIUM,
             PK_MODE_DISPLAY,
             PrimaryKeyModeRecommender.INSTANCE
@@ -377,7 +403,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             PK_FIELDS_DOC,
             DATAMAPPING_GROUP,
-            3,
+            4,
             ConfigDef.Width.LONG, PK_FIELDS_DISPLAY
         )
         .define(
@@ -387,7 +413,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             FIELDS_WHITELIST_DOC,
             DATAMAPPING_GROUP,
-            4,
+            5,
             ConfigDef.Width.LONG,
             FIELDS_WHITELIST_DISPLAY
         ).define(
@@ -398,7 +424,7 @@ public class JdbcSinkConfig extends AbstractConfig {
           ConfigDef.Importance.MEDIUM,
           DB_TIMEZONE_CONFIG_DOC,
           DATAMAPPING_GROUP,
-          5,
+          6,
           ConfigDef.Width.MEDIUM,
           DB_TIMEZONE_CONFIG_DISPLAY
         )
@@ -434,7 +460,18 @@ public class JdbcSinkConfig extends AbstractConfig {
             QUOTE_SQL_IDENTIFIERS_DISPLAY,
             QUOTE_METHOD_RECOMMENDER
         )
-        // Retries
+        .define(
+                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME,
+                ConfigDef.Type.STRING,
+                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT,
+                ConfigDef.Importance.HIGH,
+                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC,
+                DATAMAPPING_GROUP,
+                4,
+                ConfigDef.Width.LONG,
+                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME
+        )
+          // Retries
         .define(
             MAX_RETRIES,
             ConfigDef.Type.INT,
@@ -464,12 +501,14 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String connectionUser;
   public final String connectionPassword;
   public final String tableNameFormat;
+  public final String logTableNameFormat;
   public final int batchSize;
   public final boolean deleteEnabled;
   public final int maxRetries;
   public final int retryBackoffMs;
   public final boolean autoCreate;
   public final boolean autoEvolve;
+  public final String logTablePrimaryKeyColumnName;
   public final PrimaryKeyMode pkMode;
   public final List<String> pkFields;
   public final Set<String> fieldsWhitelist;
@@ -483,12 +522,14 @@ public class JdbcSinkConfig extends AbstractConfig {
     connectionUser = getString(CONNECTION_USER);
     connectionPassword = getPasswordValue(CONNECTION_PASSWORD);
     tableNameFormat = getString(TABLE_NAME_FORMAT).trim();
+    logTableNameFormat = getString(LOG_TABLE_NAME_FORMAT).trim();
     batchSize = getInt(BATCH_SIZE);
     deleteEnabled = getBoolean(DELETE_ENABLED);
     maxRetries = getInt(MAX_RETRIES);
     retryBackoffMs = getInt(RETRY_BACKOFF_MS);
     autoCreate = getBoolean(AUTO_CREATE);
     autoEvolve = getBoolean(AUTO_EVOLVE);
+    logTablePrimaryKeyColumnName = getString(LOG_TABLE_PRIMARY_KEY_COLUMN_NAME).trim();
     pkMode = PrimaryKeyMode.valueOf(getString(PK_MODE).toUpperCase());
     pkFields = getList(PK_FIELDS);
     dialectName = getString(DIALECT_NAME_CONFIG);

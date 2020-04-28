@@ -91,27 +91,11 @@ import org.slf4j.LoggerFactory;
  * <p>This class is designed to be extended as required to customize the behavior for a specific
  * DBMS.
  */
-public class GenericDatabaseDialect implements DatabaseDialect {
+public abstract class GenericDatabaseDialect implements DatabaseDialect {
 
   protected static final int NUMERIC_TYPE_SCALE_LOW = -84;
   protected static final int NUMERIC_TYPE_SCALE_HIGH = 127;
   protected static final int NUMERIC_TYPE_SCALE_UNSET = -127;
-
-  /**
-   * The provider for {@link GenericDatabaseDialect}.
-   */
-  public static class Provider extends FixedScoreProvider {
-    public Provider() {
-      super(GenericDatabaseDialect.class.getSimpleName(),
-            DatabaseDialectProvider.AVERAGE_MATCHING_SCORE
-      );
-    }
-
-    @Override
-    public DatabaseDialect create(AbstractConfig config) {
-      return new GenericDatabaseDialect(config);
-    }
-  }
 
   protected final Logger log = LoggerFactory.getLogger(getClass());
   protected final AbstractConfig config;
