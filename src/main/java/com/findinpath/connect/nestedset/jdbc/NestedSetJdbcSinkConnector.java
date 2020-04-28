@@ -16,7 +16,7 @@
 package com.findinpath.connect.nestedset.jdbc;
 
 import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig;
-import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkTask;
+import com.findinpath.connect.nestedset.jdbc.sink.NestedSetJdbcSinkTask;
 import com.findinpath.connect.nestedset.jdbc.util.Version;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,14 +28,14 @@ import org.apache.kafka.connect.sink.SinkConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JdbcSinkConnector extends SinkConnector {
+public class NestedSetJdbcSinkConnector extends SinkConnector {
   private static final Logger log = LoggerFactory
-			.getLogger(JdbcSinkConnector.class);
+			.getLogger(NestedSetJdbcSinkConnector.class);
 
   private Map<String, String> configProps;
 
   public Class<? extends Task> taskClass() {
-    return JdbcSinkTask.class;
+    return NestedSetJdbcSinkTask.class;
   }
 
   @Override

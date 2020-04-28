@@ -29,9 +29,9 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JdbcSinkTask extends SinkTask {
+public class NestedSetJdbcSinkTask extends SinkTask {
   private static final Logger log = LoggerFactory
-			.getLogger(JdbcSinkTask.class);
+			.getLogger(NestedSetJdbcSinkTask.class);
 
   DatabaseDialect dialect;
   JdbcSinkConfig config;
