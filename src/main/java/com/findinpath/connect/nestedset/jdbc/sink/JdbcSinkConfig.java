@@ -97,23 +97,30 @@ public class JdbcSinkConfig extends AbstractConfig {
       = "JDBC connection backoff in milliseconds";
   public static final long CONNECTION_BACKOFF_DEFAULT = 10000L;
 
-  public static final String TABLE_NAME_FORMAT = "table.name.format";
-  private static final String TABLE_NAME_FORMAT_DEFAULT = "${topic}";
-  private static final String TABLE_NAME_FORMAT_DOC =
-      "A format string for the destination table name, which may contain '${topic}' as a "
-      + "placeholder for the originating topic name.\n"
-      + "For example, ``kafka_${topic}`` for the topic 'categories' will map to the table name "
-      + "'kafka_categories'.";
-  private static final String TABLE_NAME_FORMAT_DISPLAY = "Table Name Format";
+  public static final String TABLE_NAME = "table.name";
+  private static final String TABLE_NAME_DOC =
+      "The destination table name for the nested set data.";
+  private static final String TABLE_NAME_DISPLAY = "Table Name";
 
-  public static final String LOG_TABLE_NAME_FORMAT = "log.table.name.format";
-  private static final String LOG_TABLE_NAME_FORMAT_DEFAULT = "${topic}_log";
-  private static final String LOG_TABLE_NAME_FORMAT_DOC =
-          "A format string for the destination log table name, which may contain '${topic}' as a "
-                  + "placeholder for the originating topic name.\n"
-                  + "For example, ``kafka_${topic}_log`` for the topic 'categories' will map to the table name "
-                  + "'kafka_categories_log'.";
-  private static final String LOG_TABLE_NAME_FORMAT_DISPLAY = "Log Table Name Format";
+  public static final String TABLE_LEFT_COLUMN_NAME = "table.left.column.name";
+  private static final String TABLE_LEFT_COLUMN_NAME_DEFAULT = "lft";
+  private static final String TABLE_LEFT_COLUMN_NAME_DOC =
+          "The column name identifier for the left coordinate in the nested set table";
+  private static final String TABLE_LEFT_COLUMN_NAME_DISPLAY = "Table Left Nested Set Coordinate Column Name";
+
+  public static final String TABLE_RIGHT_COLUMN_NAME = "table.right.column.name";
+  private static final String TABLE_RIGHT_COLUMN_NAME_DEFAULT = "rgt";
+  private static final String TABLE_RIGHT_COLUMN_NAME_DOC =
+          "The column name identifier for the right coordinate in the nested set table";
+  private static final String TABLE_RIGHT_COLUMN_NAME_DISPLAY = "Table Right Nested Set Coordinate Column Name";
+
+  public static final String LOG_TABLE_NAME = "log.table.name";
+  private static final String LOG_TABLE_NAME_DEFAULT = "${topic}_log";
+  private static final String LOG_TABLE_NAME_DOC =
+          "The log table name for the nested set data. In this table are sinked the nested set entries from Kafka" +
+                  "and they get subsequently synchronized in the destination table once the nested set merged structure" +
+                  "between the log and the existing nested set data is valid.";
+  private static final String LOG_TABLE_NAME_DISPLAY = "Log Table Name Format";
 
   public static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME = "log.table.primary.key.column.name";
   private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT = "log_id";
@@ -362,26 +369,26 @@ public class JdbcSinkConfig extends AbstractConfig {
         )
         // Data Mapping
         .define(
-            TABLE_NAME_FORMAT,
+            TABLE_NAME,
             ConfigDef.Type.STRING,
-            TABLE_NAME_FORMAT_DEFAULT,
+            ConfigDef.NO_DEFAULT_VALUE,
             ConfigDef.Importance.MEDIUM,
-            TABLE_NAME_FORMAT_DOC,
+            TABLE_NAME_DOC,
             DATAMAPPING_GROUP,
             1,
             ConfigDef.Width.LONG,
-            TABLE_NAME_FORMAT_DISPLAY
+            TABLE_NAME_DISPLAY
         )
         .define(
-                LOG_TABLE_NAME_FORMAT,
-                ConfigDef.Type.STRING,
-                LOG_TABLE_NAME_FORMAT_DEFAULT,
-                ConfigDef.Importance.MEDIUM,
-                LOG_TABLE_NAME_FORMAT_DOC,
-                DATAMAPPING_GROUP,
-                2,
-                ConfigDef.Width.LONG,
-                LOG_TABLE_NAME_FORMAT_DISPLAY
+            LOG_TABLE_NAME,
+            ConfigDef.Type.STRING,
+            LOG_TABLE_NAME_DEFAULT,
+            ConfigDef.Importance.MEDIUM,
+            LOG_TABLE_NAME_DOC,
+            DATAMAPPING_GROUP,
+            2,
+            ConfigDef.Width.LONG,
+            LOG_TABLE_NAME_DISPLAY
         )
         .define(
             PK_MODE,
@@ -461,15 +468,37 @@ public class JdbcSinkConfig extends AbstractConfig {
             QUOTE_METHOD_RECOMMENDER
         )
         .define(
-                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME,
-                ConfigDef.Type.STRING,
-                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT,
-                ConfigDef.Importance.HIGH,
-                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC,
-                DATAMAPPING_GROUP,
-                4,
-                ConfigDef.Width.LONG,
-                LOG_TABLE_PRIMARY_KEY_COLUMN_NAME
+            TABLE_LEFT_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+            TABLE_LEFT_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+            TABLE_LEFT_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            4,
+            ConfigDef.Width.LONG,
+            TABLE_LEFT_COLUMN_NAME_DISPLAY
+        )
+        .define(
+            TABLE_RIGHT_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+            TABLE_RIGHT_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+            TABLE_RIGHT_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            5,
+            ConfigDef.Width.LONG,
+            TABLE_RIGHT_COLUMN_NAME_DISPLAY
+        )
+        .define(
+            LOG_TABLE_PRIMARY_KEY_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+            LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+            LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            6,
+            ConfigDef.Width.LONG,
+            LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY
         )
           // Retries
         .define(
@@ -500,14 +529,16 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String connectionUrl;
   public final String connectionUser;
   public final String connectionPassword;
-  public final String tableNameFormat;
-  public final String logTableNameFormat;
+  public final String tableName;
+  public final String logTableName;
   public final int batchSize;
   public final boolean deleteEnabled;
   public final int maxRetries;
   public final int retryBackoffMs;
   public final boolean autoCreate;
   public final boolean autoEvolve;
+  public final String tableLeftColumnName;
+  public final String tableRightColumnName;
   public final String logTablePrimaryKeyColumnName;
   public final PrimaryKeyMode pkMode;
   public final List<String> pkFields;
@@ -521,14 +552,16 @@ public class JdbcSinkConfig extends AbstractConfig {
     connectionUrl = getString(CONNECTION_URL);
     connectionUser = getString(CONNECTION_USER);
     connectionPassword = getPasswordValue(CONNECTION_PASSWORD);
-    tableNameFormat = getString(TABLE_NAME_FORMAT).trim();
-    logTableNameFormat = getString(LOG_TABLE_NAME_FORMAT).trim();
+    tableName = getString(TABLE_NAME).trim();
+    logTableName = getString(LOG_TABLE_NAME).trim();
     batchSize = getInt(BATCH_SIZE);
     deleteEnabled = getBoolean(DELETE_ENABLED);
     maxRetries = getInt(MAX_RETRIES);
     retryBackoffMs = getInt(RETRY_BACKOFF_MS);
     autoCreate = getBoolean(AUTO_CREATE);
     autoEvolve = getBoolean(AUTO_EVOLVE);
+    tableLeftColumnName = getString(TABLE_LEFT_COLUMN_NAME).trim();
+    tableRightColumnName = getString(TABLE_RIGHT_COLUMN_NAME).trim();
     logTablePrimaryKeyColumnName = getString(LOG_TABLE_PRIMARY_KEY_COLUMN_NAME).trim();
     pkMode = PrimaryKeyMode.valueOf(getString(PK_MODE).toUpperCase());
     pkFields = getList(PK_FIELDS);

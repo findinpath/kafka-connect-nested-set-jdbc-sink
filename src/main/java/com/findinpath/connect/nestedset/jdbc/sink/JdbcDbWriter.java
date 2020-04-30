@@ -35,12 +35,17 @@ public class JdbcDbWriter {
   private final JdbcSinkConfig config;
   private final DatabaseDialect dbDialect;
   private final DbStructure dbStructure;
+  private final TableId tableId;
+  private final TableId logTableId;
   final CachedConnectionProvider cachedConnectionProvider;
 
   JdbcDbWriter(final JdbcSinkConfig config, DatabaseDialect dbDialect, DbStructure dbStructure) {
     this.config = config;
     this.dbDialect = dbDialect;
     this.dbStructure = dbStructure;
+
+    this.tableId = dbDialect.parseTableIdentifier(config.tableName);
+    this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
 
     this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
       @Override
@@ -56,8 +61,6 @@ public class JdbcDbWriter {
 
     final Map<TableId, BufferedRecords> bufferByTable = new HashMap<>();
     for (SinkRecord record : records) {
-      final TableId tableId = destinationTable(record.topic());
-      final TableId logTableId = destinationLogTable(record.topic());
       BufferedRecords buffer = bufferByTable.get(tableId);
       if (buffer == null) {
         buffer = new BufferedRecords(config, tableId, logTableId, dbDialect, dbStructure, connection);
@@ -77,29 +80,5 @@ public class JdbcDbWriter {
 
   void closeQuietly() {
     cachedConnectionProvider.close();
-  }
-
-  TableId destinationTable(String topic) {
-    final String tableName = config.tableNameFormat.replace("${topic}", topic);
-    if (tableName.isEmpty()) {
-      throw new ConnectException(String.format(
-          "Destination table name for topic '%s' is empty using the format string '%s'",
-          topic,
-          config.tableNameFormat
-      ));
-    }
-    return dbDialect.parseTableIdentifier(tableName);
-  }
-
-  TableId destinationLogTable(String topic) {
-    final String tableName = config.logTableNameFormat.replace("${topic}", topic);
-    if (tableName.isEmpty()) {
-      throw new ConnectException(String.format(
-              "Destination log table name for topic '%s' is empty using the format string '%s'",
-              topic,
-              config.logTableNameFormat
-      ));
-    }
-    return dbDialect.parseTableIdentifier(tableName);
   }
 }

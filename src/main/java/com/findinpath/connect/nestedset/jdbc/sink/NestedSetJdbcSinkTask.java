@@ -17,9 +17,6 @@ package com.findinpath.connect.nestedset.jdbc.sink;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialects;
-import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Map;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -28,6 +25,10 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Map;
 
 public class NestedSetJdbcSinkTask extends SinkTask {
   private static final Logger log = LoggerFactory
@@ -45,18 +46,21 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   public void start(final Map<String, String> props) {
     log.info("Starting JDBC Sink task");
     config = new JdbcSinkConfig(props);
-    initWriter();
-    remainingRetries = config.maxRetries;
-    asyncSquashingExecutor = new AsyncSquashingExecutor();
-    nestedSetSynchronizer = new NestedSetSynchronizer();
-  }
-
-  void initWriter() {
     if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
       dialect = DatabaseDialects.create(config.dialectName, config);
     } else {
       dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
     }
+    initWriter();
+    remainingRetries = config.maxRetries;
+    asyncSquashingExecutor = new AsyncSquashingExecutor();
+    nestedSetSynchronizer = new NestedSetSynchronizer(config, dialect);
+
+    //TODO in case that the log table exists and is not empty
+    // try on start to sync the contents to the nested table
+  }
+
+  void initWriter() {
     final DbStructure dbStructure = new DbStructure(dialect);
     log.info("Initializing writer using SQL dialect: {}", dialect.getClass().getSimpleName());
     writer = new JdbcDbWriter(config, dialect, dbStructure);
@@ -97,7 +101,34 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         throw new RetriableException(new SQLException(sqleAllMessages));
       }
     }
-    asyncSquashingExecutor.execute(()-> nestedSetSynchronizer.synchronize());
+
+    asyncSquashingExecutor.execute(() ->
+    {
+      try {
+        nestedSetSynchronizer.synchronize();
+      } catch (SQLException sqle) {
+        log.warn(
+                "Sync of records failed, remainingRetries={}",
+                remainingRetries,
+                sqle
+        );
+        String sqleAllMessages = "";
+        for (Throwable e : sqle) {
+          sqleAllMessages += e + System.lineSeparator();
+        }
+        if (remainingRetries == 0) {
+          throw new ConnectException(new SQLException(sqleAllMessages));
+        } else {
+          writer.closeQuietly();
+          initWriter();
+          remainingRetries--;
+          context.timeout(config.retryBackoffMs);
+          throw new RetriableException(new SQLException(sqleAllMessages));
+        }
+      }
+    });
+
+
     remainingRetries = config.maxRetries;
   }
 
@@ -121,6 +152,8 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         dialect = null;
       }
     }
+
+    asyncSquashingExecutor.stop();
   }
 
   @Override
