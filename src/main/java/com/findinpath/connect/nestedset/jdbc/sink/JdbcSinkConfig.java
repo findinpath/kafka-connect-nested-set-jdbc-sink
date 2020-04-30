@@ -115,6 +115,12 @@ public class JdbcSinkConfig extends AbstractConfig {
           "The column name identifier for the right coordinate in the nested set table";
   private static final String TABLE_RIGHT_COLUMN_NAME_DISPLAY = "Table Right Nested Set Coordinate Column Name";
 
+  public static final String TABLE_PRIMARY_KEY_COLUMN_NAME = "table.primary.key.column.name";
+  private static final String TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT = "id";
+  private static final String TABLE_PRIMARY_KEY_COLUMN_NAME_DOC =
+          "The column name identifier primary key in the nested set table. This is needed for deduplicating nested set log entries";
+  private static final String TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY = "Table Primary Key Column Name";
+
   public static final String LOG_TABLE_NAME = "log.table.name";
   private static final String LOG_TABLE_NAME_DOC =
           "The log table name for the nested set data. In this table are sinked the nested set entries from Kafka " +
@@ -499,13 +505,24 @@ public class JdbcSinkConfig extends AbstractConfig {
             QUOTE_METHOD_RECOMMENDER
         )
         .define(
+            TABLE_PRIMARY_KEY_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+            TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+            TABLE_PRIMARY_KEY_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            4,
+            ConfigDef.Width.LONG,
+            TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY
+        )
+        .define(
             TABLE_LEFT_COLUMN_NAME,
             ConfigDef.Type.STRING,
             TABLE_LEFT_COLUMN_NAME_DEFAULT,
             ConfigDef.Importance.HIGH,
             TABLE_LEFT_COLUMN_NAME_DOC,
             DATAMAPPING_GROUP,
-            4,
+            5,
             ConfigDef.Width.LONG,
             TABLE_LEFT_COLUMN_NAME_DISPLAY
         )
@@ -516,7 +533,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             TABLE_RIGHT_COLUMN_NAME_DOC,
             DATAMAPPING_GROUP,
-            5,
+            6,
             ConfigDef.Width.LONG,
             TABLE_RIGHT_COLUMN_NAME_DISPLAY
         )
@@ -527,31 +544,31 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC,
             DATAMAPPING_GROUP,
-            6,
+            7,
             ConfigDef.Width.LONG,
             LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY
         )
         .define(
-                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME,
+            LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME,
             ConfigDef.Type.STRING,
-                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DEFAULT,
+            LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DEFAULT,
             ConfigDef.Importance.MEDIUM,
-                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DOC,
-            DATAMAPPING_GROUP,
-            7,
-            ConfigDef.Width.LONG,
-                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_DISPLAY
-        )
-        .define(
-                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME,
-            ConfigDef.Type.STRING,
-                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DEFAULT,
-            ConfigDef.Importance.HIGH,
-                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DOC,
+            LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DOC,
             DATAMAPPING_GROUP,
             8,
             ConfigDef.Width.LONG,
-                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY
+            LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_DISPLAY
+        )
+        .define(
+            LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+            LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+            LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            9,
+            ConfigDef.Width.LONG,
+            LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY
         )
           // Retries
         .define(
@@ -591,6 +608,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final int retryBackoffMs;
   public final boolean autoCreate;
   public final boolean autoEvolve;
+  public final String tablePrimaryKeyColumnName;
   public final String tableLeftColumnName;
   public final String tableRightColumnName;
   public final String logTablePrimaryKeyColumnName;
@@ -617,6 +635,7 @@ public class JdbcSinkConfig extends AbstractConfig {
     retryBackoffMs = getInt(RETRY_BACKOFF_MS);
     autoCreate = getBoolean(AUTO_CREATE);
     autoEvolve = getBoolean(AUTO_EVOLVE);
+    tablePrimaryKeyColumnName = getString(TABLE_PRIMARY_KEY_COLUMN_NAME).trim();
     tableLeftColumnName = getString(TABLE_LEFT_COLUMN_NAME).trim();
     tableRightColumnName = getString(TABLE_RIGHT_COLUMN_NAME).trim();
     logTablePrimaryKeyColumnName = getString(LOG_TABLE_PRIMARY_KEY_COLUMN_NAME).trim();

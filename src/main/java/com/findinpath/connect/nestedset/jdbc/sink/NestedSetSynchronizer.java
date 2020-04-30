@@ -51,7 +51,17 @@ public class NestedSetSynchronizer {
                 connection,
                 logOffsetTableId);
 
-       // ...
+        // get nested set log entries
+
+        // get nested set entries
+
+        // try to merge
+
+        // if OK
+        //    save nested set log offset
+        //    insert new entries in the nested set table
+        //    update existing entries in the nested set table
+
         connection.commit();
     }
 }

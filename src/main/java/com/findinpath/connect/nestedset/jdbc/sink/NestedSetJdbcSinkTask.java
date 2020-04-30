@@ -46,24 +46,26 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   public void start(final Map<String, String> props) {
     log.info("Starting JDBC Sink task");
     config = new JdbcSinkConfig(props);
-    if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
-      dialect = DatabaseDialects.create(config.dialectName, config);
-    } else {
-      dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
-    }
-    initWriter();
+
     remainingRetries = config.maxRetries;
     asyncSquashingExecutor = new AsyncSquashingExecutor();
-    nestedSetSynchronizer = new NestedSetSynchronizer(config, dialect);
 
     //TODO in case that the log table exists and is not empty
     // try on start to sync the contents to the nested table
   }
 
-  void initWriter() {
+  void initDbWriters() {
+    if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
+      dialect = DatabaseDialects.create(config.dialectName, config);
+    } else {
+      dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
+    }
+
     final DbStructure dbStructure = new DbStructure(dialect);
     log.info("Initializing writer using SQL dialect: {}", dialect.getClass().getSimpleName());
     writer = new JdbcDbWriter(config, dialect, dbStructure);
+
+    nestedSetSynchronizer = new NestedSetSynchronizer(config, dialect, dbStructure);
   }
 
   @Override
@@ -80,6 +82,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     );
     try {
       writer.write(records);
+      nestedSetSynchronizer.synchronize();
     } catch (SQLException sqle) {
       log.warn(
           "Write of {} records failed, remainingRetries={}",
@@ -95,38 +98,12 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         throw new ConnectException(new SQLException(sqleAllMessages));
       } else {
         writer.closeQuietly();
-        initWriter();
+        initDbWriters();
         remainingRetries--;
         context.timeout(config.retryBackoffMs);
         throw new RetriableException(new SQLException(sqleAllMessages));
       }
     }
-
-    asyncSquashingExecutor.execute(() ->
-    {
-      try {
-        nestedSetSynchronizer.synchronize();
-      } catch (SQLException sqle) {
-        log.warn(
-                "Sync of records failed, remainingRetries={}",
-                remainingRetries,
-                sqle
-        );
-        String sqleAllMessages = "";
-        for (Throwable e : sqle) {
-          sqleAllMessages += e + System.lineSeparator();
-        }
-        if (remainingRetries == 0) {
-          throw new ConnectException(new SQLException(sqleAllMessages));
-        } else {
-          writer.closeQuietly();
-          initWriter();
-          remainingRetries--;
-          context.timeout(config.retryBackoffMs);
-          throw new RetriableException(new SQLException(sqleAllMessages));
-        }
-      }
-    });
 
 
     remainingRetries = config.maxRetries;
