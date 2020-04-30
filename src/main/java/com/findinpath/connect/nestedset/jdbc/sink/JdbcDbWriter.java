@@ -18,15 +18,15 @@ package com.findinpath.connect.nestedset.jdbc.sink;
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
 import com.findinpath.connect.nestedset.jdbc.util.CachedConnectionProvider;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
+import org.apache.kafka.connect.sink.SinkRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class JdbcDbWriter {
   private static final Logger log = LoggerFactory

@@ -24,11 +24,14 @@ import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import com.findinpath.connect.nestedset.jdbc.util.TableType;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,16 +61,39 @@ public class DbStructure {
   ) throws SQLException {
     if (tableDefns.get(connection, logTableId) == null) {
       // Table does not yet exist, so attempt to create it ...
-      createLogTable(config, connection, logTableId, fieldsMetadata);
+      createLogTable(config, connection, logTableId, fieldsMetadata.allFields.values());
     }
     if (tableDefns.get(connection, tableId) == null) {
       // Table does not yet exist, so attempt to create it ...
-      createTable(config, connection, tableId, fieldsMetadata);
+      createTable(config, connection, tableId, fieldsMetadata.allFields.values());
     }
 
     return amendIfNecessary(config, connection, tableId, fieldsMetadata, config.maxRetries)
             && amendIfNecessary(config, connection, logTableId, fieldsMetadata, config.maxRetries);
   }
+
+  public void createLogOffsetTableIfNecessary(
+          final JdbcSinkConfig config,
+          final Connection connection,
+          final TableId tableId
+  ) throws SQLException {
+    if (tableDefns.get(connection, tableId) == null) {
+      // Table does not yet exist, so attempt to create it ...
+      if (!config.autoCreate) {
+        throw new ConnectException(
+                String.format("Table %s is missing and auto-creation is disabled", tableId)
+        );
+      }
+
+      List<SinkRecordField> fields = new ArrayList<>();
+      fields.add(new SinkRecordField(Schema.STRING_SCHEMA, config.logOffsetTableLogTableColumnName, true));
+      fields.add(new SinkRecordField(Schema.INT32_SCHEMA, config.logOffsetTableOffsetColumnName, false));
+
+      createTable(config, connection, tableId, fields);
+    }
+
+  }
+
 
   /**
    * @throws SQLException if CREATE failed
@@ -76,7 +102,7 @@ public class DbStructure {
       final JdbcSinkConfig config,
       final Connection connection,
       final TableId tableId,
-      final FieldsMetadata fieldsMetadata
+      final Collection<SinkRecordField> fields
   ) throws SQLException {
     if (!config.autoCreate) {
       throw new ConnectException(
@@ -84,7 +110,7 @@ public class DbStructure {
       );
     }
     try{
-      String sql = dbDialect.buildCreateTableStatement(tableId, fieldsMetadata.allFields.values());
+      String sql = dbDialect.buildCreateTableStatement(tableId, fields);
       log.info("Creating table with sql: {}", sql);
       dbDialect.applyDdlStatements(connection, Collections.singletonList(sql));
     } catch (SQLException sqle) {
@@ -104,7 +130,7 @@ public class DbStructure {
           final JdbcSinkConfig config,
           final Connection connection,
           final TableId tableId,
-          final FieldsMetadata fieldsMetadata
+          final Collection<SinkRecordField> fields
   ) throws SQLException {
     if (!config.autoCreate) {
       throw new ConnectException(
@@ -114,7 +140,7 @@ public class DbStructure {
     try {
       List<String> sql = dbDialect.buildCreateLogTableStatements(tableId,
               config.logTablePrimaryKeyColumnName,
-              fieldsMetadata.allFields.values());
+              fields);
       log.info("Creating table with sql: {}", sql);
       dbDialect.applyDdlStatements(connection, sql);
     } catch (SQLException sqle) {

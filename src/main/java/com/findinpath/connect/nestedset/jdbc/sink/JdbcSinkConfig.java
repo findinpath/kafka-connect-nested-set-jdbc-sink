@@ -23,6 +23,14 @@ import com.findinpath.connect.nestedset.jdbc.util.QuoteMethod;
 import com.findinpath.connect.nestedset.jdbc.util.StringUtils;
 import com.findinpath.connect.nestedset.jdbc.util.TableType;
 import com.findinpath.connect.nestedset.jdbc.util.TimeZoneValidator;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigDef.Importance;
+import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigDef.Width;
+import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.types.Password;
+
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,13 +42,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Importance;
-import org.apache.kafka.common.config.ConfigDef.Type;
-import org.apache.kafka.common.config.ConfigDef.Width;
-import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.common.config.types.Password;
 
 public class JdbcSinkConfig extends AbstractConfig {
 
@@ -115,18 +116,37 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String TABLE_RIGHT_COLUMN_NAME_DISPLAY = "Table Right Nested Set Coordinate Column Name";
 
   public static final String LOG_TABLE_NAME = "log.table.name";
-  private static final String LOG_TABLE_NAME_DEFAULT = "${topic}_log";
   private static final String LOG_TABLE_NAME_DOC =
-          "The log table name for the nested set data. In this table are sinked the nested set entries from Kafka" +
-                  "and they get subsequently synchronized in the destination table once the nested set merged structure" +
+          "The log table name for the nested set data. In this table are sinked the nested set entries from Kafka " +
+                  "and they get subsequently synchronized in the destination table once the nested set merged structure " +
                   "between the log and the existing nested set data is valid.";
-  private static final String LOG_TABLE_NAME_DISPLAY = "Log Table Name Format";
+  private static final String LOG_TABLE_NAME_DISPLAY = "Log Table Name";
 
   public static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME = "log.table.primary.key.column.name";
   private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT = "log_id";
   private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC =
           "The column name identifier for the autoincremented primary key in the log table";
   private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY = "Log Table Primary Key Column Name";
+
+  public static final String LOG_OFFSET_TABLE_NAME = "log.offset.table.name";
+  private static final String LOG_OFFSET_TABLE_NAME_DEFAULT = "nested_set_sync_log_offset";
+  private static final String LOG_OFFSET_TABLE_NAME_DOC =
+          "The name for the offset for the synchronization log table. Whenever nested set data from the log.table.name " +
+                  "is successfully synchronized to the table.name, the corresponding offset for the log.table.name will " +
+                  "be correspondingly updated to match the latest log entry synchronized.";
+  private static final String LOG_OFFSET_TABLE_NAME_DISPLAY = "Log Offset Table Name";
+
+  public static final String LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME = "log.offset.table.log.table.column.name";
+  private static final String LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DEFAULT = "log_table_name";
+  private static final String LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DOC =
+          "The name for the column from the log.offset.table.name table holding log table name entries";
+  private static final String LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_DISPLAY = "Log Offset Log Table Column Name";
+
+  public static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME = "log.offset.table.offset.column.name";
+  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DEFAULT = "offset";
+  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DOC =
+          "The name for the column from the log.offset.table.name table holding log offset entries";
+  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY = "Log Offset Offset Column Name";
 
   public static final String MAX_RETRIES = "max.retries";
   private static final int MAX_RETRIES_DEFAULT = 10;
@@ -372,7 +392,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             TABLE_NAME,
             ConfigDef.Type.STRING,
             ConfigDef.NO_DEFAULT_VALUE,
-            ConfigDef.Importance.MEDIUM,
+            ConfigDef.Importance.HIGH,
             TABLE_NAME_DOC,
             DATAMAPPING_GROUP,
             1,
@@ -382,13 +402,24 @@ public class JdbcSinkConfig extends AbstractConfig {
         .define(
             LOG_TABLE_NAME,
             ConfigDef.Type.STRING,
-            LOG_TABLE_NAME_DEFAULT,
-            ConfigDef.Importance.MEDIUM,
+            ConfigDef.NO_DEFAULT_VALUE,
+            ConfigDef.Importance.HIGH,
             LOG_TABLE_NAME_DOC,
             DATAMAPPING_GROUP,
             2,
             ConfigDef.Width.LONG,
             LOG_TABLE_NAME_DISPLAY
+        )
+        .define(
+            LOG_OFFSET_TABLE_NAME,
+            ConfigDef.Type.STRING,
+            LOG_OFFSET_TABLE_NAME_DEFAULT,
+            ConfigDef.Importance.MEDIUM,
+            LOG_OFFSET_TABLE_NAME_DOC,
+            DATAMAPPING_GROUP,
+            3,
+            ConfigDef.Width.LONG,
+            LOG_OFFSET_TABLE_NAME_DISPLAY
         )
         .define(
             PK_MODE,
@@ -398,7 +429,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             PK_MODE_DOC,
             DATAMAPPING_GROUP,
-            3,
+            4,
             ConfigDef.Width.MEDIUM,
             PK_MODE_DISPLAY,
             PrimaryKeyModeRecommender.INSTANCE
@@ -410,7 +441,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             PK_FIELDS_DOC,
             DATAMAPPING_GROUP,
-            4,
+            5,
             ConfigDef.Width.LONG, PK_FIELDS_DISPLAY
         )
         .define(
@@ -420,7 +451,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             FIELDS_WHITELIST_DOC,
             DATAMAPPING_GROUP,
-            5,
+            6,
             ConfigDef.Width.LONG,
             FIELDS_WHITELIST_DISPLAY
         ).define(
@@ -431,7 +462,7 @@ public class JdbcSinkConfig extends AbstractConfig {
           ConfigDef.Importance.MEDIUM,
           DB_TIMEZONE_CONFIG_DOC,
           DATAMAPPING_GROUP,
-          6,
+          7,
           ConfigDef.Width.MEDIUM,
           DB_TIMEZONE_CONFIG_DISPLAY
         )
@@ -500,6 +531,28 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Width.LONG,
             LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY
         )
+        .define(
+                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.MEDIUM,
+                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            7,
+            ConfigDef.Width.LONG,
+                LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_DISPLAY
+        )
+        .define(
+                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            8,
+            ConfigDef.Width.LONG,
+                LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY
+        )
           // Retries
         .define(
             MAX_RETRIES,
@@ -531,6 +584,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String connectionPassword;
   public final String tableName;
   public final String logTableName;
+  public final String logOffsetTableName;
   public final int batchSize;
   public final boolean deleteEnabled;
   public final int maxRetries;
@@ -540,6 +594,8 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String tableLeftColumnName;
   public final String tableRightColumnName;
   public final String logTablePrimaryKeyColumnName;
+  public final String logOffsetTableLogTableColumnName;
+  public final String logOffsetTableOffsetColumnName;
   public final PrimaryKeyMode pkMode;
   public final List<String> pkFields;
   public final Set<String> fieldsWhitelist;
@@ -554,6 +610,7 @@ public class JdbcSinkConfig extends AbstractConfig {
     connectionPassword = getPasswordValue(CONNECTION_PASSWORD);
     tableName = getString(TABLE_NAME).trim();
     logTableName = getString(LOG_TABLE_NAME).trim();
+    logOffsetTableName = getString(LOG_OFFSET_TABLE_NAME).trim();
     batchSize = getInt(BATCH_SIZE);
     deleteEnabled = getBoolean(DELETE_ENABLED);
     maxRetries = getInt(MAX_RETRIES);
@@ -563,6 +620,8 @@ public class JdbcSinkConfig extends AbstractConfig {
     tableLeftColumnName = getString(TABLE_LEFT_COLUMN_NAME).trim();
     tableRightColumnName = getString(TABLE_RIGHT_COLUMN_NAME).trim();
     logTablePrimaryKeyColumnName = getString(LOG_TABLE_PRIMARY_KEY_COLUMN_NAME).trim();
+    logOffsetTableLogTableColumnName = getString(LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME).trim();
+    logOffsetTableOffsetColumnName = getString(LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME).trim();
     pkMode = PrimaryKeyMode.valueOf(getString(PK_MODE).toUpperCase());
     pkFields = getList(PK_FIELDS);
     dialectName = getString(DIALECT_NAME_CONFIG);

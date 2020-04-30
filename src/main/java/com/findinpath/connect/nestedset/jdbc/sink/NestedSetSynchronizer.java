@@ -17,19 +17,22 @@ public class NestedSetSynchronizer {
 
     private final JdbcSinkConfig config;
     private final DatabaseDialect dbDialect;
+    private final DbStructure dbStructure;
     private final TableId tableId;
     private final TableId logTableId;
-
-
+    private final TableId logOffsetTableId;
 
     public NestedSetSynchronizer(
             JdbcSinkConfig config,
-            DatabaseDialect dbDialect) {
+            DatabaseDialect dbDialect,
+            DbStructure dbStructure) {
         this.config = config;
         this.dbDialect = dbDialect;
+        this.dbStructure = dbStructure;
 
         this.tableId = dbDialect.parseTableIdentifier(config.tableName);
         this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
+        this.logOffsetTableId = dbDialect.parseTableIdentifier(config.logOffsetTableName);
 
         this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
             @Override
@@ -42,6 +45,11 @@ public class NestedSetSynchronizer {
 
     public void synchronize() throws SQLException {
         final Connection connection = cachedConnectionProvider.getConnection();
+
+        dbStructure.createLogOffsetTableIfNecessary(
+                config,
+                connection,
+                logOffsetTableId);
 
        // ...
         connection.commit();
