@@ -430,9 +430,16 @@ public interface DatabaseDialect extends ConnectionProvider {
       Object value
   ) throws SQLException;
 
-  /**
-   * A function to bind the values from a sink record into a prepared statement.
-   */
+
+
+  void appendWhereCriteria(ExpressionBuilder builder,
+                                  ColumnId logTableIncrementingColumn,
+                                  TableId logOffsetTableId,
+                                  ColumnId logOffsetTableLogTableColumn,
+                                  ColumnId logOffsetTableOffsetColumn);
+    /**
+     * A function to bind the values from a sink record into a prepared statement.
+     */
   @FunctionalInterface
   interface StatementBinder {
 

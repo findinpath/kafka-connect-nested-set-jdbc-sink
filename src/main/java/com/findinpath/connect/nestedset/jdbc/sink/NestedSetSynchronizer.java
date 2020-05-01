@@ -1,7 +1,9 @@
 package com.findinpath.connect.nestedset.jdbc.sink;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
+import com.findinpath.connect.nestedset.jdbc.sink.metadata.ResultSetRecords;
 import com.findinpath.connect.nestedset.jdbc.util.CachedConnectionProvider;
+import com.findinpath.connect.nestedset.jdbc.util.ColumnId;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,9 @@ public class NestedSetSynchronizer {
     private final TableId tableId;
     private final TableId logTableId;
     private final TableId logOffsetTableId;
+    private final NestedSetLogTableQuerier nestedSetLogTableQuerier;
+    private final BulkTableQuerier nestedSetTableQuerier;
+
 
     public NestedSetSynchronizer(
             JdbcSinkConfig config,
@@ -34,6 +39,7 @@ public class NestedSetSynchronizer {
         this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
         this.logOffsetTableId = dbDialect.parseTableIdentifier(config.logOffsetTableName);
 
+
         this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
             @Override
             protected void onConnect(Connection connection) throws SQLException {
@@ -41,6 +47,14 @@ public class NestedSetSynchronizer {
                 connection.setAutoCommit(false);
             }
         };
+
+        nestedSetLogTableQuerier = new NestedSetLogTableQuerier(dbDialect, logTableId,
+                new ColumnId(logTableId, config.logTablePrimaryKeyColumnName),
+                logOffsetTableId,
+                new ColumnId(logOffsetTableId, config.logOffsetTableLogTableColumnName),
+                new ColumnId(logOffsetTableId, config.logOffsetTableOffsetColumnName));
+
+        nestedSetTableQuerier = new BulkTableQuerier(dbDialect, tableId);
     }
 
     public void synchronize() throws SQLException {
@@ -52,8 +66,10 @@ public class NestedSetSynchronizer {
                 logOffsetTableId);
 
         // get nested set log entries
+        ResultSetRecords nestedSetLogTableUpdates = nestedSetLogTableQuerier.extractUnsynchronizedRecords(connection);
 
         // get nested set entries
+        ResultSetRecords nestedSetTableRecords = nestedSetTableQuerier.extractRecords(connection);
 
         // try to merge
 
