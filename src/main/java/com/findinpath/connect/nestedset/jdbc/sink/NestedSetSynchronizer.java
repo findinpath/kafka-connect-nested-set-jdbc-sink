@@ -174,7 +174,7 @@ public class NestedSetSynchronizer {
         // if OK
         if (rootNode.isPresent()) {
             //    save nested set log offset
-            updateLogOffset(connection, latestNestedSetLogTableRecordId);
+            upsertLogOffset(connection, latestNestedSetLogTableRecordId);
 
             //    insert new entries in the nested set table
             insertIntoNestedSetTable(connection,
@@ -193,9 +193,9 @@ public class NestedSetSynchronizer {
         connection.commit();
     }
 
-    private void updateLogOffset(Connection connection,
+    private void upsertLogOffset(Connection connection,
                                  long latestNestedSetLogTableRecordId) throws SQLException {
-        String sql = dbDialect.buildUpdateStatement(tableId,
+        String sql = dbDialect.buildUpsertQueryStatement(tableId,
                 Collections.singletonList(new ColumnId(logOffsetTableId, logOffsetTableLogTableColumnName)),
                 Collections.singletonList(new ColumnId(logOffsetTableId, logOffsetTableOffsetColumnName)));
 
