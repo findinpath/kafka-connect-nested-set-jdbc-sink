@@ -5,7 +5,6 @@ import com.findinpath.connect.nestedset.jdbc.sink.metadata.ResultSetRecords;
 import com.findinpath.connect.nestedset.jdbc.sink.tree.NestedSetNode;
 import com.findinpath.connect.nestedset.jdbc.sink.tree.TreeBuilder;
 import com.findinpath.connect.nestedset.jdbc.sink.tree.TreeNode;
-import com.findinpath.connect.nestedset.jdbc.util.CachedConnectionProvider;
 import com.findinpath.connect.nestedset.jdbc.util.ColumnId;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import org.slf4j.Logger;
@@ -13,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,8 +26,6 @@ import java.util.stream.Collectors;
 public class NestedSetSynchronizer {
     private static final Logger log = LoggerFactory
             .getLogger(NestedSetSynchronizer.class);
-
-    private final CachedConnectionProvider cachedConnectionProvider;
 
     private final JdbcSinkConfig config;
     private final DatabaseDialect dbDialect;
@@ -65,15 +61,6 @@ public class NestedSetSynchronizer {
         this.logOffsetTableLogTableColumnName = config.logOffsetTableLogTableColumnName;
         this.logOffsetTableOffsetColumnName = config.logOffsetTableOffsetColumnName;
 
-
-        this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
-            @Override
-            protected void onConnect(Connection connection) throws SQLException {
-                log.info("NestedSetSynchronizer Connected");
-                connection.setAutoCommit(false);
-            }
-        };
-
         nestedSetLogTableQuerier = new NestedSetLogTableQuerier(dbDialect, logTableId,
                 new ColumnId(logTableId, logTablePrimaryKeyColumnName),
                 logOffsetTableId,
@@ -83,9 +70,7 @@ public class NestedSetSynchronizer {
         nestedSetTableQuerier = new BulkTableQuerier(dbDialect, tableId);
     }
 
-    public void synchronize() throws SQLException {
-        final Connection connection = cachedConnectionProvider.getConnection();
-
+    public void synchronize(Connection connection) throws SQLException {
         dbStructure.createLogOffsetTableIfNecessary(
                 config,
                 connection,
@@ -222,6 +207,8 @@ public class NestedSetSynchronizer {
                               List<List<Object>> updatedNestedSetLogTableRecordsValues,
                               long latestNestedSetLogTableRecordId
     ) throws SQLException {
+        log.info("Applying nested set table updates to the table with contents from the table {}", tableId, logTableId);
+
         //    save nested set log offset
         upsertLogOffset(connection, latestNestedSetLogTableRecordId);
 
@@ -244,6 +231,8 @@ public class NestedSetSynchronizer {
         String sql = dbDialect.buildUpsertQueryStatement(tableId,
                 Collections.singletonList(new ColumnId(logOffsetTableId, logOffsetTableLogTableColumnName)),
                 Collections.singletonList(new ColumnId(logOffsetTableId, logOffsetTableOffsetColumnName)));
+
+        log.debug("Updating log offset  table ID: {} to {}", tableId, latestNestedSetLogTableRecordId);
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, logTableId.toString());

@@ -37,8 +37,6 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   DatabaseDialect dialect;
   JdbcSinkConfig config;
   JdbcDbWriter writer;
-  AsyncSquashingExecutor asyncSquashingExecutor;
-  NestedSetSynchronizer nestedSetSynchronizer;
 
   int remainingRetries;
 
@@ -46,15 +44,14 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   public void start(final Map<String, String> props) {
     log.info("Starting JDBC Sink task");
     config = new JdbcSinkConfig(props);
-    initWriters();
+    initWriter();
     remainingRetries = config.maxRetries;
-    asyncSquashingExecutor = new AsyncSquashingExecutor();
 
     //TODO in case that the log table exists and is not empty
     // try on start to sync the contents to the nested table
   }
 
-  void initWriters() {
+  void initWriter() {
     if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
       dialect = DatabaseDialects.create(config.dialectName, config);
     } else {
@@ -63,10 +60,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
 
     final DbStructure dbStructure = new DbStructure(dialect);
     log.info("Initializing writer using SQL dialect: {}", dialect.getClass().getSimpleName());
-    //TODO the writer and the sync should share the same transaction to avoid writing duplicate data to the log table
     writer = new JdbcDbWriter(config, dialect, dbStructure);
-
-    nestedSetSynchronizer = new NestedSetSynchronizer(config, dialect, dbStructure);
   }
 
   @Override
@@ -83,7 +77,6 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     );
     try {
       writer.write(records);
-      nestedSetSynchronizer.synchronize();
     } catch (SQLException sqle) {
       log.warn(
           "Write of {} records failed, remainingRetries={}",
@@ -99,7 +92,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         throw new ConnectException(new SQLException(sqleAllMessages));
       } else {
         writer.closeQuietly();
-        initWriters();
+        initWriter();
         remainingRetries--;
         context.timeout(config.retryBackoffMs);
         throw new RetriableException(new SQLException(sqleAllMessages));
@@ -130,8 +123,6 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         dialect = null;
       }
     }
-
-    asyncSquashingExecutor.stop();
   }
 
   @Override

@@ -25,8 +25,6 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 public class JdbcDbWriter {
   private static final Logger log = LoggerFactory
@@ -37,6 +35,7 @@ public class JdbcDbWriter {
   private final DbStructure dbStructure;
   private final TableId tableId;
   private final TableId logTableId;
+  private final NestedSetSynchronizer nestedSetSynchronizer;
   final CachedConnectionProvider cachedConnectionProvider;
 
   JdbcDbWriter(final JdbcSinkConfig config, DatabaseDialect dbDialect, DbStructure dbStructure) {
@@ -46,6 +45,8 @@ public class JdbcDbWriter {
 
     this.tableId = dbDialect.parseTableIdentifier(config.tableName);
     this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
+
+    nestedSetSynchronizer = new NestedSetSynchronizer(config, dbDialect, dbStructure);
 
     this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
       @Override
@@ -59,22 +60,16 @@ public class JdbcDbWriter {
   void write(final Collection<SinkRecord> records) throws SQLException {
     final Connection connection = cachedConnectionProvider.getConnection();
 
-    final Map<TableId, BufferedRecords> bufferByTable = new HashMap<>();
+    BufferedRecords buffer = new BufferedRecords(config, tableId, logTableId, dbDialect, dbStructure, connection);
     for (SinkRecord record : records) {
-      BufferedRecords buffer = bufferByTable.get(tableId);
-      if (buffer == null) {
-        buffer = new BufferedRecords(config, tableId, logTableId, dbDialect, dbStructure, connection);
-        bufferByTable.put(tableId, buffer);
-      }
       buffer.add(record);
     }
-    for (Map.Entry<TableId, BufferedRecords> entry : bufferByTable.entrySet()) {
-      TableId tableId = entry.getKey();
-      BufferedRecords buffer = entry.getValue();
-      log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
-      buffer.flush();
-      buffer.close();
-    }
+    log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
+    buffer.flush();
+    buffer.close();
+
+    nestedSetSynchronizer.synchronize(connection);
+
     connection.commit();
   }
 
