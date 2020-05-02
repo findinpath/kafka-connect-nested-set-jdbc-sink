@@ -92,16 +92,16 @@ public class NestedSetSynchronizer {
                 logOffsetTableId);
 
         // get nested set log entries
-        ResultSetRecords nestedSetLogTableUpdates = nestedSetLogTableQuerier.extractUnsynchronizedRecords(connection);
+        ResultSetRecords nestedSetLogTableUpdates = nestedSetLogTableQuerier.extractRecordsForSynchronization(connection);
 
         // deduplicate nestedSetLogTableUpdates
-        int logTablePrimaryKeyColumnIndex = getColIdxByName(logTablePrimaryKeyColumnName, nestedSetLogTableUpdates.getResultSetMetaData())
+        int logTablePrimaryKeyColumnIndex = getColIdxByName(logTablePrimaryKeyColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + logTablePrimaryKeyColumnName));
-        int logTableNestedSetNodeIdColumnIndex = getColIdxByName(tablePrimaryKeyColumnName, nestedSetLogTableUpdates.getResultSetMetaData())
+        int logTableNestedSetNodeIdColumnIndex = getColIdxByName(tablePrimaryKeyColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + tablePrimaryKeyColumnName));
-        int logTableNestedSetNodeLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetLogTableUpdates.getResultSetMetaData())
+        int logTableNestedSetNodeLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + tableLeftColumnName));
-        int logTableNestedSetNodeRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetLogTableUpdates.getResultSetMetaData())
+        int logTableNestedSetNodeRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + tableRightColumnName));
 
         Function<List<Object>, Long> getLogTableRecordId = recordValues -> getColumnAsLong(recordValues, logTablePrimaryKeyColumnIndex);
@@ -119,11 +119,11 @@ public class NestedSetSynchronizer {
 
         // get nested set entries
         ResultSetRecords nestedSetTableRecords = nestedSetTableQuerier.extractRecords(connection);
-        int tablePrimaryKeyColumnIndex = getColIdxByName(tablePrimaryKeyColumnName, nestedSetTableRecords.getResultSetMetaData())
+        int tablePrimaryKeyColumnIndex = getColIdxByName(tablePrimaryKeyColumnName, nestedSetTableRecords.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + tableId + " doesn't contain the expected column " + tablePrimaryKeyColumnName));
-        int tableLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetTableRecords.getResultSetMetaData())
+        int tableLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetTableRecords.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + tableId + " doesn't contain the expected column " + tableLeftColumnName));
-        int tableRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetTableRecords.getResultSetMetaData())
+        int tableRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetTableRecords.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + tableId + " doesn't contain the expected column " + tableRightColumnName));
         Function<List<Object>, Long> getTableRecordId = recordValues -> getColumnAsLong(recordValues, tablePrimaryKeyColumnIndex);
         Function<List<Object>, Integer> getTableRecordLeft = recordValues -> getColumnValueAsInteger(recordValues, tableLeftColumnIndex);
@@ -152,7 +152,7 @@ public class NestedSetSynchronizer {
             long latestNestedSetLogTableRecordId = getLogTableRecordId.apply(deduplicatedNestedSetLogTableRecords.get(deduplicatedNestedSetLogTableRecords.size() - 1));
 
             applyUpdates(connection,
-                    nestedSetLogTableUpdates.getResultSetMetaData(),
+                    nestedSetLogTableUpdates.getColumnNames(),
                     logTablePrimaryKeyColumnIndex,
                     logTableNestedSetNodeIdColumnIndex,
                     newNestedSetRecordsSortedByLogId,
@@ -215,7 +215,7 @@ public class NestedSetSynchronizer {
     }
 
     private void applyUpdates(Connection connection,
-                              ResultSetMetaData nestedSetLogTableResultSetMetaData,
+                              List<String> logTableColumnNames,
                               int logTablePrimaryKeyColumnIndex,
                               int logTableNestedSetNodeIdColumnIndex,
                               List<List<Object>> newNestedSetLogTableRecordsValues,
@@ -227,13 +227,13 @@ public class NestedSetSynchronizer {
 
         //    insert new entries in the nested set table
         insertIntoNestedSetTable(connection,
-                nestedSetLogTableResultSetMetaData,
+                logTableColumnNames,
                 logTablePrimaryKeyColumnIndex,
                 newNestedSetLogTableRecordsValues);
 
         //    update existing entries in the nested set table
         updatedNestedSetTable(connection,
-                nestedSetLogTableResultSetMetaData,
+                logTableColumnNames,
                 logTablePrimaryKeyColumnIndex,
                 logTableNestedSetNodeIdColumnIndex,
                 updatedNestedSetLogTableRecordsValues);
@@ -254,13 +254,13 @@ public class NestedSetSynchronizer {
     }
 
     private void insertIntoNestedSetTable(Connection connection,
-                                          ResultSetMetaData nestedSetLogTableResultSetMetaData,
+                                          List<String> columnNames,
                                           int logTablePrimaryKeyColumnIndex,
                                           List<List<Object>> nestedSetLogTableRecordsValues) throws SQLException {
 
         List<ColumnId> columns = new ArrayList<>();
-        for (int i = 1; i <= nestedSetLogTableResultSetMetaData.getColumnCount(); i++) {
-            String columnName = nestedSetLogTableResultSetMetaData.getColumnName(i);
+        for (int i = 0; i < columnNames.size(); i++) {
+            String columnName = columnNames.get(i);
             if (logTablePrimaryKeyColumnIndex != i) {
                 columns.add(new ColumnId(tableId, columnName));
             }
@@ -269,10 +269,11 @@ public class NestedSetSynchronizer {
         String sql = dbDialect.buildInsertStatement(tableId, Collections.emptyList(), columns);
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            int parameterIndex = 1;
             for (List<Object> nestedSetLogTableRecordValues : nestedSetLogTableRecordsValues) {
-                for (int i = 1; i <= nestedSetLogTableResultSetMetaData.getColumnCount(); i++) {
+                for (int i = 0; i < columnNames.size(); i++) {
                     if (logTablePrimaryKeyColumnIndex != i) {
-                        stmt.setObject(i, nestedSetLogTableRecordValues.get(i));
+                        stmt.setObject(parameterIndex++, nestedSetLogTableRecordValues.get(i));
                     }
                 }
                 stmt.addBatch();
@@ -283,15 +284,15 @@ public class NestedSetSynchronizer {
     }
 
     private void updatedNestedSetTable(Connection connection,
-                                       ResultSetMetaData nestedSetLogTableResultSetMetaData,
+                                       List<String> columnNames,
                                        int logTablePrimaryKeyColumnIndex,
                                        int logTableNestedSetNodeIdColumnIndex,
                                        List<List<Object>> nestedSetLogTableRecordsValues) throws SQLException {
 
         ColumnId keyColumn = new ColumnId(tableId, tablePrimaryKeyColumnName);
         List<ColumnId> nonKeyColumns = new ArrayList<>();
-        for (int i = 1; i <= nestedSetLogTableResultSetMetaData.getColumnCount(); i++) {
-            String columnName = nestedSetLogTableResultSetMetaData.getColumnName(i);
+        for (int i = 0; i < columnNames.size(); i++) {
+            String columnName = columnNames.get(i);
             if (i != logTablePrimaryKeyColumnIndex && i != logTableNestedSetNodeIdColumnIndex) {
                 nonKeyColumns.add(new ColumnId(tableId, columnName));
             }
@@ -299,13 +300,14 @@ public class NestedSetSynchronizer {
         String sql = dbDialect.buildUpdateStatement(tableId, Collections.singletonList(keyColumn), nonKeyColumns);
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            int parameterIndex = 1;
             for (List<Object> nestedSetLogTableRecordValues : nestedSetLogTableRecordsValues) {
-                for (int i = 1; i <= nestedSetLogTableResultSetMetaData.getColumnCount(); i++) {
+                for (int i = 0; i < columnNames.size(); i++) {
                     if (i != logTablePrimaryKeyColumnIndex && i != logTableNestedSetNodeIdColumnIndex) {
-                        stmt.setObject(i, nestedSetLogTableRecordValues.get(i));
+                        stmt.setObject(parameterIndex++, nestedSetLogTableRecordValues.get(i));
                     }
                 }
-                stmt.setObject(nestedSetLogTableResultSetMetaData.getColumnCount() - 1,
+                stmt.setObject(parameterIndex,
                         nestedSetLogTableRecordValues.get(logTableNestedSetNodeIdColumnIndex));
 
                 stmt.addBatch();
@@ -380,15 +382,15 @@ public class NestedSetSynchronizer {
 
     /**
      * Returns the column number of the column with the given name in the
-     * <code>ResultSetMetaData</code> object.
+     * result set metadata columns.
      *
      * @param name a <code>String</code> object that is the name of a column in
-     *             this <code>ResultSetMetaData</code> object
+     *             the result set metadata columns.
      */
-    private static Optional<Integer> getColIdxByName(String name, ResultSetMetaData resultSetMetaData) throws SQLException {
+    private static Optional<Integer> getColIdxByName(String name, List<String> columnNames) throws SQLException {
 
-        for (int i = 1; i <= resultSetMetaData.getColumnCount(); ++i) {
-            String colName = resultSetMetaData.getColumnName(i);
+        for (int i = 0; i < columnNames.size(); ++i) {
+            String colName = columnNames.get(i);
             if (colName != null)
                 if (name.equalsIgnoreCase(colName))
                     return Optional.of(i);

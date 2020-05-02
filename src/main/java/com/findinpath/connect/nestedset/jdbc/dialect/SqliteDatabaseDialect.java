@@ -21,16 +21,17 @@ import com.findinpath.connect.nestedset.jdbc.util.ColumnId;
 import com.findinpath.connect.nestedset.jdbc.util.ExpressionBuilder;
 import com.findinpath.connect.nestedset.jdbc.util.IdentifierRules;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A {@link DatabaseDialect} for SQLite.
@@ -164,12 +165,10 @@ public class SqliteDatabaseDialect extends GenericDatabaseDialect {
     // Append the criteria using the columns ...
     builder.append(" WHERE ");
     builder.append(logTableIncrementingColumn);
-    builder.append(" > MAX ( ");
-    builder.append("(");
-    builder.append("SELECT ").append(logOffsetTableOffsetColumn).append("FROM ").append(logOffsetTableId)
-            .append(" WHERE ").append(logOffsetTableLogTableColumn).append(" = ?");
-    builder.append("), 0)");
-    builder.append(" )");
+    builder.append(" > COALESCE ( ")
+            .append("(SELECT ").append(logOffsetTableOffsetColumn).append("FROM ").append(logOffsetTableId)
+            .append(" WHERE ").append(logOffsetTableLogTableColumn).append(" = ?)");
+    builder.append(", 0 )");
     builder.append(" ORDER BY ");
     builder.append(logTableIncrementingColumn);
     builder.append(" ASC");

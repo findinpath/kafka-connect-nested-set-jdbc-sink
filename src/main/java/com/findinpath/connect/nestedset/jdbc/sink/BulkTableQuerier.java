@@ -42,7 +42,11 @@ public class BulkTableQuerier {
                 columnValuesList.add(columnValues);
             }
 
-            return new ResultSetRecords(resultSetMetaData, columnValuesList);
+            List<String> columnNames = new ArrayList<>();
+            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
+                columnNames.add(resultSetMetaData.getColumnName(i));
+
+            return new ResultSetRecords(columnNames, columnValuesList);
         }
     }
 

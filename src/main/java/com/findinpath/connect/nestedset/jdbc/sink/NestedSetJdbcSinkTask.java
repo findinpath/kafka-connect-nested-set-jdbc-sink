@@ -46,7 +46,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   public void start(final Map<String, String> props) {
     log.info("Starting JDBC Sink task");
     config = new JdbcSinkConfig(props);
-
+    initWriters();
     remainingRetries = config.maxRetries;
     asyncSquashingExecutor = new AsyncSquashingExecutor();
 
@@ -54,7 +54,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     // try on start to sync the contents to the nested table
   }
 
-  void initDbWriters() {
+  void initWriters() {
     if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
       dialect = DatabaseDialects.create(config.dialectName, config);
     } else {
@@ -63,6 +63,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
 
     final DbStructure dbStructure = new DbStructure(dialect);
     log.info("Initializing writer using SQL dialect: {}", dialect.getClass().getSimpleName());
+    //TODO the writer and the sync should share the same transaction to avoid writing duplicate data to the log table
     writer = new JdbcDbWriter(config, dialect, dbStructure);
 
     nestedSetSynchronizer = new NestedSetSynchronizer(config, dialect, dbStructure);
@@ -98,7 +99,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
         throw new ConnectException(new SQLException(sqleAllMessages));
       } else {
         writer.closeQuietly();
-        initDbWriters();
+        initWriters();
         remainingRetries--;
         context.timeout(config.retryBackoffMs);
         throw new RetriableException(new SQLException(sqleAllMessages));

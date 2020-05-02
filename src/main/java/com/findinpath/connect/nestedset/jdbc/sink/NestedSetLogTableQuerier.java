@@ -38,14 +38,14 @@ public class NestedSetLogTableQuerier {
         this.logTableId = logTableId;
         this.logTableIncrementingColumn = logTableIncrementingColumn;
         this.logOffsetTableId = logOffsetTableId;
-        this.logOffsetTableLogTableColumn =logOffsetTableLogTableColumn;
+        this.logOffsetTableLogTableColumn = logOffsetTableLogTableColumn;
         this.logOffsetTableOffsetColumn = logOffsetTableOffsetColumn;
     }
 
-    public ResultSetRecords extractUnsynchronizedRecords(Connection connection) throws SQLException {
-        try(PreparedStatement stmt = createPreparedStatement(connection); ResultSet resultSet = executeQuery(stmt)){
+    public ResultSetRecords extractRecordsForSynchronization(Connection connection) throws SQLException {
+        try (PreparedStatement stmt = createPreparedStatement(connection); ResultSet resultSet = executeQuery(stmt)) {
 
-            ResultSetMetaData  resultSetMetaData = resultSet.getMetaData();
+            ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
 
             List<List<Object>> columnValuesList = new ArrayList<>();
             while (resultSet.next()) {
@@ -56,7 +56,11 @@ public class NestedSetLogTableQuerier {
                 columnValuesList.add(columnValues);
             }
 
-            return new ResultSetRecords(resultSetMetaData, columnValuesList);
+            List<String> columnNames = new ArrayList<>();
+            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
+                columnNames.add(resultSetMetaData.getColumnName(i));
+
+            return new ResultSetRecords(columnNames, columnValuesList);
         }
     }
 
