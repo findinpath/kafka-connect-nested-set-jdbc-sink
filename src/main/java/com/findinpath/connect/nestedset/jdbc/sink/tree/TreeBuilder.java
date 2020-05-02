@@ -49,7 +49,7 @@ public final class TreeBuilder {
     private static boolean isValidNestedSet(List<NestedSetNode> nestedSetNodes) {
         if (nestedSetNodes == null || nestedSetNodes.isEmpty()) return false;
 
-        Comparator<Comparable> naturalOrdering = Comparable<Comparable>::compareTo;
+        Comparator<Integer> naturalOrdering = Integer::compareTo;
         Optional<NestedSetNode> nestedSetNodeWithInvalidCoordinates = nestedSetNodes.stream()
                 .filter(nestedSetNode -> !isValid(nestedSetNode))
                 .findAny();
