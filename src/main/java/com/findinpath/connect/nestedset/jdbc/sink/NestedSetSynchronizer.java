@@ -109,28 +109,13 @@ public class NestedSetSynchronizer {
         Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft = recordValues -> getColumnValueAsInteger(recordValues, logTableNestedSetNodeLeftColumnIndex);
         Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight = recordValues -> getColumnValueAsInteger(recordValues, logTableNestedSetNodeRightColumnIndex);
 
+        List<List<Object>> deduplicatedNestedSetLogTableRecords = deduplicateNestedSetLogTableRecords(nestedSetLogTableUpdates.getRecords(),
+                getLogTableRecordId, getLogTableRecordNestedSetNodeId);
 
-        Map<Long, List<Object>> nestedSetNodeId2LatestLogTableRecordValues = new HashMap<>();
-
-        boolean invalidNestedSetLogTableRecordsFound = false;
-        for (List<Object> recordValues : nestedSetLogTableUpdates.getRecords()) {
-            Long nestedSetNodeId = getLogTableRecordNestedSetNodeId.apply(recordValues);
-            if (!isValidNestedSetNode(recordValues, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
-                invalidNestedSetLogTableRecordsFound = true;
-                log.error("The entry {} of the table {} contains invalid nested set coordinates", logTableId, nestedSetNodeId);
-            }
-            List<Object> latestLogTableRecordValues = nestedSetNodeId2LatestLogTableRecordValues.get(nestedSetNodeId);
-            if (latestLogTableRecordValues == null ||
-                    (getLogTableRecordId.apply(recordValues) > getLogTableRecordId.apply(latestLogTableRecordValues))) {
-                nestedSetNodeId2LatestLogTableRecordValues.put(nestedSetNodeId, recordValues);
-            }
+        if (!isValidNestedSetNodeContent(deduplicatedNestedSetLogTableRecords, logTableId,
+                getLogTableRecordId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
+            return;
         }
-        if (invalidNestedSetLogTableRecordsFound) return;
-
-        List<List<Object>> deduplicatedNestedSetLogTableRecords = new ArrayList<>(nestedSetNodeId2LatestLogTableRecordValues.values());
-
-        long latestNestedSetLogTableRecordId = getLogTableRecordId.apply(deduplicatedNestedSetLogTableRecords.get(deduplicatedNestedSetLogTableRecords.size() - 1));
-
 
         // get nested set entries
         ResultSetRecords nestedSetTableRecords = nestedSetTableQuerier.extractRecords(connection);
@@ -144,53 +129,114 @@ public class NestedSetSynchronizer {
         Function<List<Object>, Integer> getTableRecordLeft = recordValues -> getColumnValueAsInteger(recordValues, tableLeftColumnIndex);
         Function<List<Object>, Integer> getTableRecordRight = recordValues -> getColumnValueAsInteger(recordValues, tableRightColumnIndex);
 
-        boolean invalidNestedSetTableRecordsFound = false;
-        for (List<Object> recordValues : nestedSetTableRecords.getRecords()) {
-            if (!isValidNestedSetNode(recordValues, getTableRecordLeft, getTableRecordRight)) {
-                invalidNestedSetTableRecordsFound = true;
-                Long nestedSetNodeId = getTableRecordId.apply(recordValues);
-                log.error("The entry {} of the table {} contains invalid nested set coordinates", tableId, nestedSetNodeId);
-            }
+        if (!isValidNestedSetNodeContent(nestedSetTableRecords.getRecords(), tableId,
+                getTableRecordId, getTableRecordLeft, getTableRecordRight)) {
+            return;
         }
-        if (invalidNestedSetTableRecordsFound) return;
-
-
-        Map<Long, List<Object>> id2NestedSetRecordMap = nestedSetTableRecords.getRecords().stream()
-                .collect(Collectors.toMap(getTableRecordId, Function.identity()));
-        Predicate<List<Object>> isNestedSetNodeAlreadyPersisted = (List<Object> nestedSetLogRecord) ->
-                id2NestedSetRecordMap.containsKey(getLogTableRecordNestedSetNodeId.apply(nestedSetLogRecord));
-        Map<Boolean, List<List<Object>>> unsynchronizedNestedSetLogRecordsPartitions = deduplicatedNestedSetLogTableRecords.stream()
-                .collect(Collectors.partitioningBy(isNestedSetNodeAlreadyPersisted));
-        List<List<Object>> newNestedSetRecordsSortedByLogId = unsynchronizedNestedSetLogRecordsPartitions.get(false);
-        List<List<Object>> updatedNestedSetRecordsSortedByLogId = unsynchronizedNestedSetLogRecordsPartitions.get(true);
-
-
-        // try to merge
-        List<NestedSetNode> updatedNestedSet = getUpdatedNestedSet(nestedSetTableRecords.getRecords(), getTableRecordId, getTableRecordLeft, getTableRecordRight,
-                deduplicatedNestedSetLogTableRecords, getLogTableRecordNestedSetNodeId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight);
-
-        Optional<TreeNode> rootNode = TreeBuilder.buildTree(updatedNestedSet);
 
         // if OK
-        if (rootNode.isPresent()) {
-            //    save nested set log offset
-            upsertLogOffset(connection, latestNestedSetLogTableRecordId);
+        if (isValidNestedSetModel(nestedSetTableRecords.getRecords(),
+                getTableRecordId, getTableRecordLeft, getTableRecordRight,
+                deduplicatedNestedSetLogTableRecords,
+                getLogTableRecordNestedSetNodeId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
 
-            //    insert new entries in the nested set table
-            insertIntoNestedSetTable(connection,
-                    nestedSetLogTableUpdates.getResultSetMetaData(),
-                    logTablePrimaryKeyColumnIndex,
-                    newNestedSetRecordsSortedByLogId);
+            Map<Long, List<Object>> id2NestedSetRecordMap = nestedSetTableRecords.getRecords().stream()
+                    .collect(Collectors.toMap(getTableRecordId, Function.identity()));
+            Predicate<List<Object>> isNestedSetNodeAlreadyPersisted = (List<Object> nestedSetLogRecord) ->
+                    id2NestedSetRecordMap.containsKey(getLogTableRecordNestedSetNodeId.apply(nestedSetLogRecord));
+            Map<Boolean, List<List<Object>>> nestedSetLogRecordsToSynchronizePartitions = deduplicatedNestedSetLogTableRecords.stream()
+                    .collect(Collectors.partitioningBy(isNestedSetNodeAlreadyPersisted));
+            List<List<Object>> newNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions.get(false);
+            List<List<Object>> updatedNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions.get(true);
 
-            //    update existing entries in the nested set table
-            updatedNestedSetTable(connection,
+            long latestNestedSetLogTableRecordId = getLogTableRecordId.apply(deduplicatedNestedSetLogTableRecords.get(deduplicatedNestedSetLogTableRecords.size() - 1));
+
+            applyUpdates(connection,
                     nestedSetLogTableUpdates.getResultSetMetaData(),
                     logTablePrimaryKeyColumnIndex,
                     logTableNestedSetNodeIdColumnIndex,
-                    updatedNestedSetRecordsSortedByLogId);
+                    newNestedSetRecordsSortedByLogId,
+                    updatedNestedSetRecordsSortedByLogId,
+                    latestNestedSetLogTableRecordId
+            );
         }
 
         connection.commit();
+    }
+
+    private List<List<Object>> deduplicateNestedSetLogTableRecords(List<List<Object>> nestedSetLogTableRecordsValues,
+                                                                   Function<List<Object>, Long> getLogTableRecordId,
+                                                                   Function<List<Object>, Long> getLogTableRecordNestedSetNodeId) {
+        Map<Long, List<Object>> nestedSetNodeId2LatestLogTableRecordValues = new HashMap<>();
+        for (List<Object> recordValues : nestedSetLogTableRecordsValues) {
+            Long nestedSetNodeId = getLogTableRecordNestedSetNodeId.apply(recordValues);
+            List<Object> latestLogTableRecordValues = nestedSetNodeId2LatestLogTableRecordValues.get(nestedSetNodeId);
+            if (latestLogTableRecordValues == null ||
+                    (getLogTableRecordId.apply(recordValues) > getLogTableRecordId.apply(latestLogTableRecordValues))) {
+                nestedSetNodeId2LatestLogTableRecordValues.put(nestedSetNodeId, recordValues);
+            }
+        }
+        return new ArrayList<>(nestedSetNodeId2LatestLogTableRecordValues.values());
+    }
+
+    private boolean isValidNestedSetNodeContent(List<List<Object>> recordsValues,
+                                                TableId tableId,
+                                                Function<List<Object>, Long> getTableRecordId,
+                                                Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
+                                                Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
+        boolean invalidNestedSetLogTableRecordsFound = false;
+        for (List<Object> recordValues : recordsValues) {
+            Long id = getTableRecordId.apply(recordValues);
+            if (!isValidNestedSetNode(recordValues, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
+                invalidNestedSetLogTableRecordsFound = true;
+                log.error("The entry with the ID {} of the table {} contains invalid nested set coordinates", tableId, id);
+            }
+        }
+        return invalidNestedSetLogTableRecordsFound;
+    }
+
+    private boolean isValidNestedSetModel(List<List<Object>> nestedSetTableRecordsValues,
+                                          Function<List<Object>, Long> getNestedSetTableRecordId,
+                                          Function<List<Object>, Integer> getNestedSetTableRecordLeft,
+                                          Function<List<Object>, Integer> getNestedSetTableRecordRight,
+                                          List<List<Object>> nestedSetLogTableRecordsValues,
+                                          Function<List<Object>, Long> getLogTableRecordNestedSetNodeId,
+                                          Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
+                                          Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
+        // merge the updates from the nested set log table into the existing nested set
+        List<NestedSetNode> updatedNestedSetNodes = getUpdatedNestedSet(nestedSetTableRecordsValues,
+                getNestedSetTableRecordId, getNestedSetTableRecordLeft, getNestedSetTableRecordRight,
+                nestedSetLogTableRecordsValues,
+                getLogTableRecordNestedSetNodeId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight);
+
+        Optional<TreeNode> rootNode = TreeBuilder.buildTree(updatedNestedSetNodes);
+
+        return rootNode.isPresent();
+    }
+
+    private void applyUpdates(Connection connection,
+                              ResultSetMetaData nestedSetLogTableResultSetMetaData,
+                              int logTablePrimaryKeyColumnIndex,
+                              int logTableNestedSetNodeIdColumnIndex,
+                              List<List<Object>> newNestedSetLogTableRecordsValues,
+                              List<List<Object>> updatedNestedSetLogTableRecordsValues,
+                              long latestNestedSetLogTableRecordId
+    ) throws SQLException {
+        //    save nested set log offset
+        upsertLogOffset(connection, latestNestedSetLogTableRecordId);
+
+        //    insert new entries in the nested set table
+        insertIntoNestedSetTable(connection,
+                nestedSetLogTableResultSetMetaData,
+                logTablePrimaryKeyColumnIndex,
+                newNestedSetLogTableRecordsValues);
+
+        //    update existing entries in the nested set table
+        updatedNestedSetTable(connection,
+                nestedSetLogTableResultSetMetaData,
+                logTablePrimaryKeyColumnIndex,
+                logTableNestedSetNodeIdColumnIndex,
+                updatedNestedSetLogTableRecordsValues);
     }
 
     private void upsertLogOffset(Connection connection,
@@ -346,8 +392,6 @@ public class NestedSetSynchronizer {
             if (colName != null)
                 if (name.equalsIgnoreCase(colName))
                     return Optional.of(i);
-                else
-                    continue;
         }
         return Optional.empty();
     }
