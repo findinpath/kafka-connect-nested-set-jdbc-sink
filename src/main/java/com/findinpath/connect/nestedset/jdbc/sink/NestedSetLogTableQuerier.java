@@ -47,6 +47,10 @@ public class NestedSetLogTableQuerier {
 
             ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
 
+            List<String> columnNames = new ArrayList<>();
+            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
+                columnNames.add(resultSetMetaData.getColumnName(i));
+
             List<List<Object>> columnValuesList = new ArrayList<>();
             while (resultSet.next()) {
                 List<Object> columnValues = new ArrayList<>();
@@ -56,9 +60,6 @@ public class NestedSetLogTableQuerier {
                 columnValuesList.add(columnValues);
             }
 
-            List<String> columnNames = new ArrayList<>();
-            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
-                columnNames.add(resultSetMetaData.getColumnName(i));
 
             return new ResultSetRecords(columnNames, columnValuesList);
         }

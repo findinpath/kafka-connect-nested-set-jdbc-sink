@@ -32,6 +32,9 @@ public class BulkTableQuerier {
         try(PreparedStatement stmt = createPreparedStatement(connection); ResultSet resultSet = executeQuery(stmt)){
 
             ResultSetMetaData  resultSetMetaData = resultSet.getMetaData();
+            List<String> columnNames = new ArrayList<>();
+            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
+                columnNames.add(resultSetMetaData.getColumnName(i));
 
             List<List<Object>> columnValuesList = new ArrayList<>();
             while (resultSet.next()) {
@@ -42,9 +45,6 @@ public class BulkTableQuerier {
                 columnValuesList.add(columnValues);
             }
 
-            List<String> columnNames = new ArrayList<>();
-            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
-                columnNames.add(resultSetMetaData.getColumnName(i));
 
             return new ResultSetRecords(columnNames, columnValuesList);
         }
