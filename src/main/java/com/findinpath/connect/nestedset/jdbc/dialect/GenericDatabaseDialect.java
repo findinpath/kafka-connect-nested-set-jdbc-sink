@@ -1564,6 +1564,23 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
   }
 
   @Override
+  public String buildCreateLogOffsetTableStatement(TableId table, String logTableColumnName, String offsetColumnName){
+    ExpressionBuilder builder = expressionBuilder();
+
+    builder.append("CREATE TABLE ");
+    builder.append(table);
+    builder.append(" (");
+
+    List<SinkRecordField> fields = new ArrayList<>();
+    fields.add(new SinkRecordField(Schema.STRING_SCHEMA, logTableColumnName, true));
+    fields.add(new SinkRecordField(Schema.INT32_SCHEMA, offsetColumnName, false));
+    writeColumnsSpec(builder, fields);
+    builder.append(", PRIMARY KEY (").appendColumnName(logTableColumnName).append(")");
+    builder.append(")");
+    return builder.toString();
+  }
+
+  @Override
   public void appendWhereCriteria(ExpressionBuilder builder,
                                   ColumnId logTableIncrementingColumn,
                                   TableId logOffsetTableId,

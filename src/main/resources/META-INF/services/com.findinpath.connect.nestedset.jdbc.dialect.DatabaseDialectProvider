@@ -1,2 +1,3 @@
 com.findinpath.connect.nestedset.jdbc.dialect.SqliteDatabaseDialect$Provider
 com.findinpath.connect.nestedset.jdbc.dialect.PostgreSqlDatabaseDialect$Provider
+com.findinpath.connect.nestedset.jdbc.dialect.MySqlDatabaseDialect$Provider

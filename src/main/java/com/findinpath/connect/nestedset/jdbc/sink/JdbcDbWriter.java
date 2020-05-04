@@ -64,11 +64,13 @@ public class JdbcDbWriter {
     for (SinkRecord record : records) {
       buffer.add(record);
     }
+
     log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
     buffer.flush();
-    buffer.close();
 
     nestedSetSynchronizer.synchronize(connection);
+
+    buffer.close();
 
     connection.commit();
   }

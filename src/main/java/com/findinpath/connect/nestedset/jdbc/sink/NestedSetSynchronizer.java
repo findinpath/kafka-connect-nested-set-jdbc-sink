@@ -73,8 +73,7 @@ public class NestedSetSynchronizer {
     public void synchronize(Connection connection) throws SQLException {
         dbStructure.createLogOffsetTableIfNecessary(
                 config,
-                connection,
-                logOffsetTableId);
+                connection);
 
         // get nested set log entries
         ResultSetRecords nestedSetLogTableUpdates = nestedSetLogTableQuerier.extractRecordsForSynchronization(connection);

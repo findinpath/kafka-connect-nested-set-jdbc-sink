@@ -387,6 +387,16 @@ public interface DatabaseDialect extends ConnectionProvider {
   List<String> buildCreateLogTableStatements(TableId table, String primaryKeyColumnName, Collection<SinkRecordField> fields);
 
   /**
+   * Build the CREATE TABLE statement(s) expression for the given nested set log offset table and its columns.
+   *
+   * @param table  the identifier of the nested set log table; may not be null
+   * @param logTableColumnName the name used for the primary key column in the log offset table.
+   * @param offsetColumnName the name for the column holding the sync offset
+   * @return the statements needed for creating the log table; may not be null
+   */
+  String buildCreateLogOffsetTableStatement(TableId table, String logTableColumnName, String offsetColumnName);
+
+  /**
    * Build the ALTER TABLE statement expression for the given table and its columns.
    *
    * @param table  the identifier of the table; may not be null

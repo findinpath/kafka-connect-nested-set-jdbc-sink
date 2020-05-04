@@ -74,24 +74,35 @@ public class DbStructure {
 
   public void createLogOffsetTableIfNecessary(
           final JdbcSinkConfig config,
-          final Connection connection,
-          final TableId tableId
+          final Connection connection
   ) throws SQLException {
-    if (tableDefns.get(connection, tableId) == null) {
+    TableId logOffsetTableId = dbDialect.parseTableIdentifier(config.logOffsetTableName);
+    if (tableDefns.get(connection, logOffsetTableId) == null) {
       // Table does not yet exist, so attempt to create it ...
       if (!config.autoCreate) {
         throw new ConnectException(
-                String.format("Table %s is missing and auto-creation is disabled", tableId)
+                String.format("Table %s is missing and auto-creation is disabled", logOffsetTableId)
         );
       }
 
-      List<SinkRecordField> fields = new ArrayList<>();
-      fields.add(new SinkRecordField(Schema.STRING_SCHEMA, config.logOffsetTableLogTableColumnName, true));
-      fields.add(new SinkRecordField(Schema.INT32_SCHEMA, config.logOffsetTableOffsetColumnName, false));
-
-      createTable(config, connection, tableId, fields);
+      try{
+        String sql = dbDialect.buildCreateLogOffsetTableStatement(logOffsetTableId,
+                config.logOffsetTableLogTableColumnName,
+                config.logOffsetTableOffsetColumnName);
+        log.info("Creating table with sql: {}", sql);
+        dbDialect.applyDdlStatements(connection, Collections.singletonList(sql));
+      } catch (SQLException sqle) {
+        log.warn("Create failed, will attempt amend if table already exists", sqle);
+        try {
+          TableDefinition newDefn = tableDefns.refresh(connection, logOffsetTableId);
+          if (newDefn == null) {
+            throw sqle;
+          }
+        } catch (SQLException e) {
+          throw sqle;
+        }
+      }
     }
-
   }
 
 
