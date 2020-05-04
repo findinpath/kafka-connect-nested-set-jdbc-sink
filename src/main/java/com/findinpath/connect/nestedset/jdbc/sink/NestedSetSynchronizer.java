@@ -15,6 +15,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,7 +140,10 @@ public class NestedSetSynchronizer {
             List<List<Object>> newNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions.get(false);
             List<List<Object>> updatedNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions.get(true);
 
-            long latestNestedSetLogTableRecordId = getLogTableRecordId.apply(deduplicatedNestedSetLogTableRecords.get(deduplicatedNestedSetLogTableRecords.size() - 1));
+            long latestNestedSetLogTableRecordId = nestedSetLogTableRecords.stream()
+                    .map(getTableRecordId)
+                    .max(Comparator.naturalOrder())
+                    .get();
 
             applyUpdates(connection,
                     nestedSetLogTableUpdates.getColumnNames(),
