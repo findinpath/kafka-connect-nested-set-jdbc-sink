@@ -154,23 +154,4 @@ public class SqliteDatabaseDialect extends GenericDatabaseDialect {
   protected String currentTimestampDatabaseQuery() {
     return "SELECT strftime('%Y-%m-%d %H:%M:%S.%f','now')";
   }
-
-
-  @Override
-  public void appendWhereCriteria(ExpressionBuilder builder,
-                                  ColumnId logTableIncrementingColumn,
-                                  TableId logOffsetTableId,
-                                  ColumnId logOffsetTableLogTableColumn,
-                                  ColumnId logOffsetTableOffsetColumn){
-    // Append the criteria using the columns ...
-    builder.append(" WHERE ");
-    builder.append(logTableIncrementingColumn);
-    builder.append(" > COALESCE ( ")
-            .append("(SELECT ").append(logOffsetTableOffsetColumn).append("FROM ").append(logOffsetTableId)
-            .append(" WHERE ").append(logOffsetTableLogTableColumn).append(" = ?)");
-    builder.append(", 0 )");
-    builder.append(" ORDER BY ");
-    builder.append(logTableIncrementingColumn);
-    builder.append(" ASC");
-  }
 }

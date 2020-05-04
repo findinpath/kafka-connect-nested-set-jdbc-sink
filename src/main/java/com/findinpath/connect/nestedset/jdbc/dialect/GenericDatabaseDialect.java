@@ -1299,26 +1299,6 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
     clob.free();
   }
 
-  public void appendWhereCriteria(ExpressionBuilder builder,
-                   ColumnId logTableIncrementingColumn,
-                   TableId logOffsetTableId,
-                   ColumnId logOffsetTableLogTableColumn,
-                   ColumnId logOffsetTableOffsetColumn){
-    // Append the criteria using the columns ...
-    builder.append(" WHERE ");
-    builder.append(logTableIncrementingColumn);
-    builder.append(" > GREATEST( ");
-    builder.append("(");
-    builder.append("SELECT ").append(logOffsetTableOffsetColumn).append("FROM ").append(logOffsetTableId)
-            .append(" WHERE ").append(logOffsetTableLogTableColumn).append(" = ?");
-    builder.append("), 0)");
-    builder.append(" )");
-    builder.append(" ORDER BY ");
-    builder.append(logTableIncrementingColumn);
-    builder.append(" ASC");
-  }
-
-
   @Override
   public String buildInsertStatement(
       TableId table,
@@ -1581,6 +1561,24 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
            .transformedBy(transform)
            .of(fields);
     return Collections.singletonList(builder.toString());
+  }
+
+  @Override
+  public void appendWhereCriteria(ExpressionBuilder builder,
+                                  ColumnId logTableIncrementingColumn,
+                                  TableId logOffsetTableId,
+                                  ColumnId logOffsetTableLogTableColumn,
+                                  ColumnId logOffsetTableOffsetColumn){
+    // Append the criteria using the columns ...
+    builder.append(" WHERE ");
+    builder.append(logTableIncrementingColumn);
+    builder.append(" > COALESCE ( ")
+            .append("(SELECT ").append(logOffsetTableOffsetColumn).append("FROM ").append(logOffsetTableId)
+            .append(" WHERE ").append(logOffsetTableLogTableColumn).append(" = ?)");
+    builder.append(", 0 )");
+    builder.append(" ORDER BY ");
+    builder.append(logTableIncrementingColumn);
+    builder.append(" ASC");
   }
 
   protected List<String> extractPrimaryKeyFieldNames(Collection<SinkRecordField> fields) {
