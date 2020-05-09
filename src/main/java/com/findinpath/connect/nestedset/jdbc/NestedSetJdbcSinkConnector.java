@@ -15,18 +15,25 @@
 
 package com.findinpath.connect.nestedset.jdbc;
 
+import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
+import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialects;
+import com.findinpath.connect.nestedset.jdbc.sink.DbStructure;
 import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig;
 import com.findinpath.connect.nestedset.jdbc.sink.NestedSetJdbcSinkTask;
 import com.findinpath.connect.nestedset.jdbc.util.Version;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class NestedSetJdbcSinkConnector extends SinkConnector {
   private static final Logger log = LoggerFactory
@@ -51,6 +58,7 @@ public class NestedSetJdbcSinkConnector extends SinkConnector {
   @Override
   public void start(Map<String, String> props) {
     configProps = props;
+    createLogOffsetTableIfNecessary();
   }
 
   @Override
@@ -70,5 +78,29 @@ public class NestedSetJdbcSinkConnector extends SinkConnector {
   @Override
   public String version() {
     return Version.getVersion();
+  }
+
+  private void createLogOffsetTableIfNecessary() {
+    JdbcSinkConfig config = new JdbcSinkConfig(configProps);
+    try (DatabaseDialect dialect = getDatabaseDialect(config);
+         Connection connection = dialect.getConnection()) {
+      connection.setAutoCommit(false);
+      final DbStructure dbStructure = new DbStructure(dialect);
+      dbStructure.createLogOffsetTableIfNecessary(
+              config,
+              connection);
+
+      connection.commit();
+    } catch (SQLException sqle) {
+      throw new ConnectException(sqle);
+    }
+  }
+
+  private DatabaseDialect getDatabaseDialect(JdbcSinkConfig config){
+    if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
+      return DatabaseDialects.create(config.dialectName, config);
+    } else {
+      return DatabaseDialects.findBestFor(config.connectionUrl, config);
+    }
   }
 }

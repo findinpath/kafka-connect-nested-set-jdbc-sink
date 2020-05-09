@@ -17,6 +17,7 @@ package com.findinpath.connect.nestedset.jdbc.sink;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialects;
+import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -26,6 +27,7 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
@@ -37,29 +39,33 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   DatabaseDialect dialect;
   JdbcSinkConfig config;
   JdbcDbWriter writer;
+  NestedSetRecordsSynchronizer nestedSetRecordsSynchronizer;
 
   int remainingRetries;
+
 
   @Override
   public void start(final Map<String, String> props) {
     log.info("Starting JDBC Sink task");
     config = new JdbcSinkConfig(props);
-    initWriter();
-    remainingRetries = config.maxRetries;
 
-    //TODO in case that the log table exists and is not empty
-    // try on start to sync the contents to the nested table
-  }
-
-  void initWriter() {
     if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
       dialect = DatabaseDialects.create(config.dialectName, config);
     } else {
       dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
     }
+    log.info("using SQL dialect: {}", dialect.getClass().getSimpleName());
+    nestedSetRecordsSynchronizer = new NestedSetRecordsSynchronizer(config, dialect);
+    log.info("Synchronizing eventual pending nested set records");
+    synchronizePendingNestedSetRecords();
 
+    initWriter();
+    remainingRetries = config.maxRetries;
+
+  }
+
+  void initWriter() {
     final DbStructure dbStructure = new DbStructure(dialect);
-    log.info("Initializing writer using SQL dialect: {}", dialect.getClass().getSimpleName());
     writer = new JdbcDbWriter(config, dialect, dbStructure);
   }
 
@@ -77,6 +83,7 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     );
     try {
       writer.write(records);
+      nestedSetRecordsSynchronizer.synchronizeRecords();
     } catch (SQLException sqle) {
       log.warn(
           "Write of {} records failed, remainingRetries={}",
@@ -130,4 +137,14 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     return getClass().getPackage().getImplementationVersion();
   }
 
+  private void synchronizePendingNestedSetRecords(){
+    TableId tableId = dialect.parseTableIdentifier(config.tableName);
+    try(Connection connection = dialect.getConnection()) {
+      if (dialect.tableExists(connection, tableId)){
+        nestedSetRecordsSynchronizer.synchronizeRecords();
+      }
+    }catch(SQLException e){
+      throw new ConnectException(e);
+    }
+  }
 }

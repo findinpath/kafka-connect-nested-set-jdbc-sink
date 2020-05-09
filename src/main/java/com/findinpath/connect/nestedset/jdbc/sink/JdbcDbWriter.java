@@ -35,7 +35,6 @@ public class JdbcDbWriter {
   private final DbStructure dbStructure;
   private final TableId tableId;
   private final TableId logTableId;
-  private final NestedSetSynchronizer nestedSetSynchronizer;
   final CachedConnectionProvider cachedConnectionProvider;
 
   JdbcDbWriter(final JdbcSinkConfig config, DatabaseDialect dbDialect, DbStructure dbStructure) {
@@ -45,8 +44,6 @@ public class JdbcDbWriter {
 
     this.tableId = dbDialect.parseTableIdentifier(config.tableName);
     this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
-
-    nestedSetSynchronizer = new NestedSetSynchronizer(config, dbDialect, dbStructure);
 
     this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
       @Override
@@ -60,19 +57,24 @@ public class JdbcDbWriter {
   void write(final Collection<SinkRecord> records) throws SQLException {
     final Connection connection = cachedConnectionProvider.getConnection();
 
-    BufferedRecords buffer = new BufferedRecords(config, tableId, logTableId, dbDialect, dbStructure, connection);
-    for (SinkRecord record : records) {
-      buffer.add(record);
+    try {
+      BufferedRecords buffer = new BufferedRecords(config, tableId,
+              logTableId, dbDialect,
+              dbStructure, connection);
+
+      for (SinkRecord record : records) {
+        buffer.add(record);
+      }
+
+      log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
+      buffer.flush();
+
+      buffer.close();
+
+      connection.commit();
+    }catch(SQLException e){
+      connection.rollback();
     }
-
-    log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
-    buffer.flush();
-
-    nestedSetSynchronizer.synchronize(connection);
-
-    buffer.close();
-
-    connection.commit();
   }
 
   void closeQuietly() {

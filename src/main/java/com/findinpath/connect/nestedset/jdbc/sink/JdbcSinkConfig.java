@@ -149,10 +149,10 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_DISPLAY = "Log Offset Log Table Column Name";
 
   public static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME = "log.offset.table.offset.column.name";
-  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DEFAULT = "offset";
+  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DEFAULT = "log_table_offset";
   private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DOC =
           "The name for the column from the log.offset.table.name table holding log offset entries";
-  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY = "Log Offset Offset Column Name";
+  private static final String LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY = "Log Offset Log Table Offset Column Name";
 
   public static final String MAX_RETRIES = "max.retries";
   private static final int MAX_RETRIES_DEFAULT = 10;
