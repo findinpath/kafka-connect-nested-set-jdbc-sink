@@ -103,6 +103,7 @@ public class SqliteDatabaseDialect extends GenericDatabaseDialect {
   public List<String> buildCreateLogTableStatements(
           TableId table,
           String primaryKeyColumnName,
+          String operationTypeColumnName,
           Collection<SinkRecordField> fields
   ) {
     ExpressionBuilder builder = expressionBuilder();
@@ -113,7 +114,10 @@ public class SqliteDatabaseDialect extends GenericDatabaseDialect {
     builder.appendColumnName(primaryKeyColumnName);
     builder.append(" ");
     builder.append("INTEGER PRIMARY KEY AUTOINCREMENT,");
-    writeColumnsSpec(builder, fields);
+    builder.appendColumnName(operationTypeColumnName);
+    builder.append(" ");
+    builder.append("INTEGER NOT NULL,");
+    writeNullableColumnsSpec(builder, fields);
     builder.append(")");
     return Arrays.asList(builder.toString());
   }
@@ -126,6 +130,18 @@ public class SqliteDatabaseDialect extends GenericDatabaseDialect {
     final List<String> queries = new ArrayList<>(fields.size());
     for (SinkRecordField field : fields) {
       queries.addAll(super.buildAlterTable(table, Collections.singleton(field)));
+    }
+    return queries;
+  }
+
+  @Override
+  public List<String> buildAlterLogTable(
+          TableId table,
+          Collection<SinkRecordField> fields
+  ) {
+    final List<String> queries = new ArrayList<>(fields.size());
+    for (SinkRecordField field : fields) {
+      queries.addAll(super.buildAlterLogTable(table, Collections.singleton(field)));
     }
     return queries;
   }

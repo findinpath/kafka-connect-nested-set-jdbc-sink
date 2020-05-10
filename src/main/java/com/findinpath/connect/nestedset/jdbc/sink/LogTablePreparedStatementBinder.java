@@ -16,20 +16,21 @@
 package com.findinpath.connect.nestedset.jdbc.sink;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
-import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect.StatementBinder;
+import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect.LogTableStatementBinder;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.FieldsMetadata;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.SchemaPair;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 import static java.util.Objects.isNull;
 
-public class PreparedStatementBinder implements StatementBinder {
+public class LogTablePreparedStatementBinder implements LogTableStatementBinder {
 
   private final JdbcSinkConfig.PrimaryKeyMode pkMode;
   private final PreparedStatement statement;
@@ -37,7 +38,7 @@ public class PreparedStatementBinder implements StatementBinder {
   private final FieldsMetadata fieldsMetadata;
   private final DatabaseDialect dialect;
 
-  public PreparedStatementBinder(
+  public LogTablePreparedStatementBinder(
       DatabaseDialect dialect,
       PreparedStatement statement,
       JdbcSinkConfig.PrimaryKeyMode pkMode,
@@ -51,8 +52,7 @@ public class PreparedStatementBinder implements StatementBinder {
     this.fieldsMetadata = fieldsMetadata;
   }
 
-  @Override
-  public void bindRecord(SinkRecord record) throws SQLException {
+  public void bindRecord(SinkRecord record, OperationType operationType) throws SQLException {
     final Struct valueStruct = (Struct) record.value();
     final boolean isDelete = isNull(valueStruct);
     // Assumption: the relevant SQL has placeholders for keyFieldNames first followed by
@@ -63,6 +63,7 @@ public class PreparedStatementBinder implements StatementBinder {
     //             keyFieldNames, in iteration order for all UPDATE queries
 
     int index = 1;
+    bindField(index++, Schema.INT32_SCHEMA, operationType.ordinal());
     if (isDelete) {
       bindKeyFields(record, index);
     } else {

@@ -45,13 +45,6 @@ import java.util.stream.Collectors;
 
 public class JdbcSinkConfig extends AbstractConfig {
 
-  public enum InsertMode {
-    INSERT,
-    UPSERT,
-    UPDATE;
-
-  }
-
   public enum PrimaryKeyMode {
     NONE,
     KAFKA,
@@ -133,6 +126,13 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DOC =
           "The column name identifier for the autoincremented primary key in the log table";
   private static final String LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY = "Log Table Primary Key Column Name";
+
+  public static final String LOG_TABLE_OPERATION_TYPE_COLUMN_NAME = "log.table.operation.type.column.name";
+  private static final String LOG_TABLE_OPERATION_TYPE_COLUMN_NAME_DEFAULT = "operation_type";
+  private static final String LOG_TABLE_OPERATION_TYPE_COLUMN_NAME_DOC =
+          "The column name identifier for the column denoting whether UPSERT/DELETE operation type in the log table";
+  private static final String LOG_TABLE_OPERATION_TYPE_COLUMN_NAME_DISPLAY = "Log Table Operation Type Column Name";
+
 
   public static final String LOG_OFFSET_TABLE_NAME = "log.offset.table.name";
   private static final String LOG_OFFSET_TABLE_NAME_DEFAULT = "nested_set_sync_log_offset";
@@ -549,13 +549,24 @@ public class JdbcSinkConfig extends AbstractConfig {
             LOG_TABLE_PRIMARY_KEY_COLUMN_NAME_DISPLAY
         )
         .define(
+            LOG_TABLE_OPERATION_TYPE_COLUMN_NAME,
+            ConfigDef.Type.STRING,
+            LOG_TABLE_OPERATION_TYPE_COLUMN_NAME_DEFAULT,
+            ConfigDef.Importance.HIGH,
+            LOG_TABLE_OPERATION_TYPE_COLUMN_NAME_DOC,
+            DATAMAPPING_GROUP,
+            8,
+            ConfigDef.Width.LONG,
+            LOG_TABLE_OPERATION_TYPE_COLUMN_NAME_DISPLAY
+        )
+        .define(
             LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME,
             ConfigDef.Type.STRING,
             LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DEFAULT,
             ConfigDef.Importance.MEDIUM,
             LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME_DOC,
             DATAMAPPING_GROUP,
-            8,
+            9,
             ConfigDef.Width.LONG,
             LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_DISPLAY
         )
@@ -566,7 +577,7 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DOC,
             DATAMAPPING_GROUP,
-            9,
+            10,
             ConfigDef.Width.LONG,
             LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME_DISPLAY
         )
@@ -612,6 +623,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String tableLeftColumnName;
   public final String tableRightColumnName;
   public final String logTablePrimaryKeyColumnName;
+  public final String logTableOperationTypeColumnName;
   public final String logOffsetTableLogTableColumnName;
   public final String logOffsetTableOffsetColumnName;
   public final PrimaryKeyMode pkMode;
@@ -639,6 +651,7 @@ public class JdbcSinkConfig extends AbstractConfig {
     tableLeftColumnName = getString(TABLE_LEFT_COLUMN_NAME).trim();
     tableRightColumnName = getString(TABLE_RIGHT_COLUMN_NAME).trim();
     logTablePrimaryKeyColumnName = getString(LOG_TABLE_PRIMARY_KEY_COLUMN_NAME).trim();
+    logTableOperationTypeColumnName = getString(LOG_TABLE_OPERATION_TYPE_COLUMN_NAME).trim();
     logOffsetTableLogTableColumnName = getString(LOG_OFFSET_TABLE_LOG_TABLE_COLUMN_NAME).trim();
     logOffsetTableOffsetColumnName = getString(LOG_OFFSET_TABLE_OFFSET_COLUMN_NAME).trim();
     pkMode = PrimaryKeyMode.valueOf(getString(PK_MODE).toUpperCase());

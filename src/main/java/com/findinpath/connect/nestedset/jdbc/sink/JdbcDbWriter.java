@@ -74,6 +74,7 @@ public class JdbcDbWriter {
       connection.commit();
     }catch(SQLException e){
       connection.rollback();
+      throw e;
     }
   }
 

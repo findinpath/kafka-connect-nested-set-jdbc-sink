@@ -167,7 +167,10 @@ public class MySqlDatabaseDialect extends GenericDatabaseDialect {
   }
 
   @Override
-  public List<String> buildCreateLogTableStatements(TableId table, String primaryKeyColumnName, Collection<SinkRecordField> fields) {
+  public List<String> buildCreateLogTableStatements(TableId table,
+                                                    String primaryKeyColumnName,
+                                                    String operationTypeColumnName,
+                                                    Collection<SinkRecordField> fields) {
     ExpressionBuilder builder = expressionBuilder();
 
     builder.append("CREATE TABLE ");
@@ -176,14 +179,19 @@ public class MySqlDatabaseDialect extends GenericDatabaseDialect {
     builder.appendColumnName(primaryKeyColumnName);
     builder.append(" ");
     builder.append("INT NOT NULL AUTO_INCREMENT,");
-    writeColumnsSpec(builder, fields);
+    builder.appendColumnName(operationTypeColumnName);
+    builder.append(" ");
+    builder.append("INT NOT NULL,");
+    writeNullableColumnsSpec(builder, fields);
     builder.append(", PRIMARY KEY (").appendColumnName(primaryKeyColumnName).append(")");
     builder.append(")");
     return Arrays.asList(builder.toString());
   }
 
   @Override
-  public String buildCreateLogOffsetTableStatement(TableId table, String logTableColumnName, String offsetColumnName){
+  public String buildCreateLogOffsetTableStatement(TableId table,
+                                                   String logTableColumnName,
+                                                   String offsetColumnName){
     ExpressionBuilder builder = expressionBuilder();
 
     builder.append("CREATE TABLE ");

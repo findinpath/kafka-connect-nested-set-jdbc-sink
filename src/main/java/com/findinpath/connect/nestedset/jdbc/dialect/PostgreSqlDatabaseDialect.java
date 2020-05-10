@@ -277,7 +277,10 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
 
 
   @Override
-  public List<String> buildCreateLogTableStatements(TableId table, String primaryKeyColumnName, Collection<SinkRecordField> fields) {
+  public List<String> buildCreateLogTableStatements(TableId table,
+                                                    String primaryKeyColumnName,
+                                                    String operationTypeColumnName,
+                                                    Collection<SinkRecordField> fields) {
     ExpressionBuilder builder = expressionBuilder();
 
     builder.append("CREATE TABLE ");
@@ -286,7 +289,10 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
     builder.appendColumnName(primaryKeyColumnName);
     builder.append(" ");
     builder.append("BIGSERIAL,");
-    writeColumnsSpec(builder, fields);
+    builder.appendColumnName(operationTypeColumnName);
+    builder.append(" ");
+    builder.append("INT NOT NULL,");
+    writeNullableColumnsSpec(builder, fields);
     builder.append(", PRIMARY KEY (").appendColumnName(primaryKeyColumnName).append(")");
     builder.append(")");
     return Arrays.asList(builder.toString());

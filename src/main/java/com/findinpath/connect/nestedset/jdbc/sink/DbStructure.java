@@ -22,19 +22,18 @@ import com.findinpath.connect.nestedset.jdbc.util.TableDefinition;
 import com.findinpath.connect.nestedset.jdbc.util.TableDefinitions;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import com.findinpath.connect.nestedset.jdbc.util.TableType;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.function.BiFunction;
 
 public class DbStructure {
   private static final Logger log = LoggerFactory
@@ -68,8 +67,8 @@ public class DbStructure {
       createTable(config, connection, tableId, fieldsMetadata.allFields.values());
     }
 
-    return amendIfNecessary(config, connection, tableId, fieldsMetadata, config.maxRetries)
-            && amendIfNecessary(config, connection, logTableId, fieldsMetadata, config.maxRetries);
+    return amendIfNecessary(config, connection, tableId, fieldsMetadata, dbDialect::buildAlterTable, config.maxRetries)
+            || amendIfNecessary(config, connection, logTableId, fieldsMetadata, dbDialect::buildAlterLogTable, config.maxRetries);
   }
 
   public void createLogOffsetTableIfNecessary(
@@ -151,6 +150,7 @@ public class DbStructure {
     try {
       List<String> sql = dbDialect.buildCreateLogTableStatements(tableId,
               config.logTablePrimaryKeyColumnName,
+              config.logTableOperationTypeColumnName,
               fields);
       log.info("Creating table with sql: {}", sql);
       dbDialect.applyDdlStatements(connection, sql);
@@ -176,6 +176,7 @@ public class DbStructure {
       final Connection connection,
       final TableId tableId,
       final FieldsMetadata fieldsMetadata,
+      BiFunction<TableId, Set<SinkRecordField>, List<String>> alterTableStatementGenerator,
       final int maxRetries
   ) throws SQLException {
     // NOTE:
@@ -242,7 +243,7 @@ public class DbStructure {
       ));
     }
 
-    final List<String> amendTableQueries = dbDialect.buildAlterTable(tableId, missingFields);
+    final List<String> amendTableQueries = alterTableStatementGenerator.apply(tableId, missingFields);
     log.info(
         "Amending {} to add missing fields:{} maxRetries:{} with SQL: {}",
         type,
@@ -272,6 +273,7 @@ public class DbStructure {
           connection,
           tableId,
           fieldsMetadata,
+          alterTableStatementGenerator,
           maxRetries - 1
       );
     }

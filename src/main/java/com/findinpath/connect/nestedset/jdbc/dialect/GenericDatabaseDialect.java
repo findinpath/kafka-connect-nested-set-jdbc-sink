@@ -15,12 +15,10 @@
 
 package com.findinpath.connect.nestedset.jdbc.dialect;
 
-import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialectProvider.FixedScoreProvider;
 import com.findinpath.connect.nestedset.jdbc.sink.ColumnMapping;
 import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig;
-import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.InsertMode;
 import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode;
-import com.findinpath.connect.nestedset.jdbc.sink.PreparedStatementBinder;
+import com.findinpath.connect.nestedset.jdbc.sink.LogTablePreparedStatementBinder;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.FieldsMetadata;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.SchemaPair;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.SinkRecordField;
@@ -54,7 +52,6 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -79,7 +76,6 @@ import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
@@ -1371,13 +1367,13 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
   }
 
   @Override
-  public StatementBinder statementBinder(
+  public LogTableStatementBinder statementBinder(
       PreparedStatement statement,
       PrimaryKeyMode pkMode,
       SchemaPair schemaPair,
       FieldsMetadata fieldsMetadata
   ) {
-    return new PreparedStatementBinder(
+    return new LogTablePreparedStatementBinder(
         this,
         statement,
         pkMode,
@@ -1552,14 +1548,40 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
       writeColumnSpec(builder, field);
     };
 
+    return buildAlterTable(table, fields, transform);
+  }
+
+  @Override
+  public List<String> buildAlterLogTable(
+          TableId table,
+          Collection<SinkRecordField> fields
+  ) {
+    final boolean newlines = fields.size() > 1;
+
+    final Transform<SinkRecordField> transform = (builder, field) -> {
+      if (newlines) {
+        builder.appendNewLine();
+      }
+      builder.append("ADD ");
+      writeNullableColumnSpec(builder, field);
+    };
+
+    return buildAlterTable(table, fields, transform);
+  }
+
+  protected List<String> buildAlterTable(
+          TableId table,
+          Collection<SinkRecordField> fields,
+          Transform<SinkRecordField> transform
+  ) {
     ExpressionBuilder builder = expressionBuilder();
     builder.append("ALTER TABLE ");
     builder.append(table);
     builder.append(" ");
     builder.appendList()
-           .delimitedBy(",")
-           .transformedBy(transform)
-           .of(fields);
+            .delimitedBy(",")
+            .transformedBy(transform)
+            .of(fields);
     return Collections.singletonList(builder.toString());
   }
 
@@ -1619,6 +1641,17 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
     builder.appendList().delimitedBy(",").transformedBy(transform).of(fields);
   }
 
+  protected void writeNullableColumnsSpec(
+          ExpressionBuilder builder,
+          Collection<SinkRecordField> fields
+  ) {
+    Transform<SinkRecordField> transform = (b, field) -> {
+      b.append(System.lineSeparator());
+      writeNullableColumnSpec(b, field);
+    };
+    builder.appendList().delimitedBy(",").transformedBy(transform).of(fields);
+  }
+
   protected void writeColumnSpec(
       ExpressionBuilder builder,
       SinkRecordField f
@@ -1641,6 +1674,17 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
     } else {
       builder.append(" NOT NULL");
     }
+  }
+
+  protected void writeNullableColumnSpec(
+          ExpressionBuilder builder,
+          SinkRecordField f
+  ) {
+    builder.appendColumnName(f.name());
+    builder.append(" ");
+    String sqlType = getSqlType(f);
+    builder.append(sqlType);
+    builder.append(" NULL");
   }
 
   protected boolean isColumnOptional(SinkRecordField field) {

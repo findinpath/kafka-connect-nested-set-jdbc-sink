@@ -20,12 +20,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.groupingBy;
 
 public class NestedSetRecordsSynchronizer {
     private static final Logger log = LoggerFactory
@@ -40,6 +45,7 @@ public class NestedSetRecordsSynchronizer {
     private final String tableRightColumnName;
     private final TableId logTableId;
     private final String logTablePrimaryKeyColumnName;
+    private final String logTableOperationTypeColumnName;
     private final TableId logOffsetTableId;
     private final String logOffsetTableLogTableColumnName;
     private final String logOffsetTableOffsetColumnName;
@@ -59,6 +65,7 @@ public class NestedSetRecordsSynchronizer {
         this.tableRightColumnName = config.tableRightColumnName;
         this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
         this.logTablePrimaryKeyColumnName = config.logTablePrimaryKeyColumnName;
+        this.logTableOperationTypeColumnName = config.logTableOperationTypeColumnName;
         this.logOffsetTableId = dbDialect.parseTableIdentifier(config.logOffsetTableName);
         this.logOffsetTableLogTableColumnName = config.logOffsetTableLogTableColumnName;
         this.logOffsetTableOffsetColumnName = config.logOffsetTableOffsetColumnName;
@@ -83,9 +90,9 @@ public class NestedSetRecordsSynchronizer {
     public void synchronizeRecords() throws SQLException {
         final Connection connection = cachedConnectionProvider.getConnection();
 
-        try{
+        try {
             synchronizeRecords(connection);
-        }catch(SQLException e){
+        } catch (SQLException e) {
             connection.rollback();
             throw e;
         }
@@ -96,15 +103,17 @@ public class NestedSetRecordsSynchronizer {
 
         // get nested set log entries
         ResultSetRecords nestedSetLogTableUpdates = nestedSetLogTableQuerier.extractRecordsForSynchronization(connection);
-        List<List<Object>>  nestedSetLogTableRecords = nestedSetLogTableUpdates.getRecords();
+        List<List<Object>> nestedSetLogTableRecords = nestedSetLogTableUpdates.getRecords();
         log.info("Outstanding nested set log entries in the table {} to be synchronized {}", logTableId, nestedSetLogTableRecords.size());
-        if (nestedSetLogTableRecords == null || nestedSetLogTableRecords.isEmpty()){
+        if (nestedSetLogTableRecords == null || nestedSetLogTableRecords.isEmpty()) {
             return;
         }
 
         // deduplicate nestedSetLogTableUpdates
         int logTablePrimaryKeyColumnIndex = getColIdxByName(logTablePrimaryKeyColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + logTablePrimaryKeyColumnName));
+        int logTableOperationTypeColumnIndex = getColIdxByName(logTableOperationTypeColumnName, nestedSetLogTableUpdates.getColumnNames())
+                .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + logTableOperationTypeColumnName));
         int logTableNestedSetNodeIdColumnIndex = getColIdxByName(tablePrimaryKeyColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + tablePrimaryKeyColumnName));
         int logTableNestedSetNodeLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetLogTableUpdates.getColumnNames())
@@ -112,8 +121,9 @@ public class NestedSetRecordsSynchronizer {
         int logTableNestedSetNodeRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetLogTableUpdates.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + logTableId + " doesn't contain the expected column " + tableRightColumnName));
 
-        Function<List<Object>, Long> getLogTableRecordId = recordValues -> getColumnAsLong(recordValues, logTablePrimaryKeyColumnIndex);
-        Function<List<Object>, Long> getLogTableRecordNestedSetNodeId = recordValues -> getColumnAsLong(recordValues, logTableNestedSetNodeIdColumnIndex);
+        Function<List<Object>, Long> getLogTableRecordId = recordValues -> getColumnValueAsLong(recordValues, logTablePrimaryKeyColumnIndex);
+        Function<List<Object>, Integer> getLogTableOperationType = recordValues -> getColumnValueAsInteger(recordValues, logTableOperationTypeColumnIndex);
+        Function<List<Object>, Long> getLogTableRecordNestedSetNodeId = recordValues -> getColumnValueAsLong(recordValues, logTableNestedSetNodeIdColumnIndex);
         Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft = recordValues -> getColumnValueAsInteger(recordValues, logTableNestedSetNodeLeftColumnIndex);
         Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight = recordValues -> getColumnValueAsInteger(recordValues, logTableNestedSetNodeRightColumnIndex);
 
@@ -134,7 +144,7 @@ public class NestedSetRecordsSynchronizer {
                 .orElseThrow(() -> new SQLException("The table " + tableId + " doesn't contain the expected column " + tableLeftColumnName));
         int tableRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetTableRecords.getColumnNames())
                 .orElseThrow(() -> new SQLException("The table " + tableId + " doesn't contain the expected column " + tableRightColumnName));
-        Function<List<Object>, Long> getTableRecordId = recordValues -> getColumnAsLong(recordValues, tablePrimaryKeyColumnIndex);
+        Function<List<Object>, Long> getTableRecordId = recordValues -> getColumnValueAsLong(recordValues, tablePrimaryKeyColumnIndex);
         Function<List<Object>, Integer> getTableRecordLeft = recordValues -> getColumnValueAsInteger(recordValues, tableLeftColumnIndex);
         Function<List<Object>, Integer> getTableRecordRight = recordValues -> getColumnValueAsInteger(recordValues, tableRightColumnIndex);
 
@@ -147,16 +157,25 @@ public class NestedSetRecordsSynchronizer {
         if (isValidNestedSetModel(nestedSetTableRecords.getRecords(),
                 getTableRecordId, getTableRecordLeft, getTableRecordRight,
                 deduplicatedNestedSetLogTableRecords,
-                getLogTableRecordNestedSetNodeId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
+                getLogTableRecordNestedSetNodeId, getLogTableOperationType, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
 
             Map<Long, List<Object>> id2NestedSetRecordMap = nestedSetTableRecords.getRecords().stream()
                     .collect(Collectors.toMap(getTableRecordId, Function.identity()));
             Predicate<List<Object>> isNestedSetNodeAlreadyPersisted = (List<Object> nestedSetLogRecord) ->
                     id2NestedSetRecordMap.containsKey(getLogTableRecordNestedSetNodeId.apply(nestedSetLogRecord));
-            Map<Boolean, List<List<Object>>> nestedSetLogRecordsToSynchronizePartitions = deduplicatedNestedSetLogTableRecords.stream()
+            Map<Integer, List<List<Object>>> nestedSetLogRecordsToSynchronizePartitions = deduplicatedNestedSetLogTableRecords
+                    .stream()
+                    .collect(groupingBy(recordValues -> getColumnValueAsInteger(recordValues, logTableOperationTypeColumnIndex)));
+            nestedSetLogRecordsToSynchronizePartitions.get(OperationType.UPSERT.ordinal());
+
+            Map<Boolean, List<List<Object>>> nestedSetLogRecordsToUpsertPartitions = nestedSetLogRecordsToSynchronizePartitions
+                    .get(OperationType.UPSERT.ordinal())
+                    .stream()
                     .collect(Collectors.partitioningBy(isNestedSetNodeAlreadyPersisted));
-            List<List<Object>> newNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions.get(false);
-            List<List<Object>> updatedNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions.get(true);
+            List<List<Object>> newNestedSetRecordsSortedByLogId = nestedSetLogRecordsToUpsertPartitions.get(false);
+            List<List<Object>> updatedNestedSetRecordsSortedByLogId = nestedSetLogRecordsToUpsertPartitions.get(true);
+            List<List<Object>> deletedNestedSetRecordsSortedByLogId = nestedSetLogRecordsToSynchronizePartitions
+                    .get(OperationType.DELETE.ordinal());
 
             long latestNestedSetLogTableRecordId = nestedSetLogTableRecords.stream()
                     .map(getTableRecordId)
@@ -166,9 +185,11 @@ public class NestedSetRecordsSynchronizer {
             applyUpdates(connection,
                     nestedSetLogTableUpdates.getColumnNames(),
                     logTablePrimaryKeyColumnIndex,
+                    logTableOperationTypeColumnIndex,
                     logTableNestedSetNodeIdColumnIndex,
                     newNestedSetRecordsSortedByLogId,
                     updatedNestedSetRecordsSortedByLogId,
+                    deletedNestedSetRecordsSortedByLogId,
                     latestNestedSetLogTableRecordId
             );
         }
@@ -211,13 +232,14 @@ public class NestedSetRecordsSynchronizer {
                                           Function<List<Object>, Integer> getNestedSetTableRecordRight,
                                           List<List<Object>> nestedSetLogTableRecordsValues,
                                           Function<List<Object>, Long> getLogTableRecordNestedSetNodeId,
+                                          Function<List<Object>, Integer> getLogTableRecordOperationType,
                                           Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
                                           Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
         // merge the updates from the nested set log table into the existing nested set
         List<NestedSetNode> updatedNestedSetNodes = getUpdatedNestedSet(nestedSetTableRecordsValues,
                 getNestedSetTableRecordId, getNestedSetTableRecordLeft, getNestedSetTableRecordRight,
                 nestedSetLogTableRecordsValues,
-                getLogTableRecordNestedSetNodeId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight);
+                getLogTableRecordNestedSetNodeId, getLogTableRecordOperationType, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight);
 
         Optional<TreeNode> rootNode = TreeBuilder.buildTree(updatedNestedSetNodes);
 
@@ -227,9 +249,11 @@ public class NestedSetRecordsSynchronizer {
     private void applyUpdates(Connection connection,
                               List<String> logTableColumnNames,
                               int logTablePrimaryKeyColumnIndex,
+                              int logTableOperationTypeColumnIndex,
                               int logTableNestedSetNodeIdColumnIndex,
                               List<List<Object>> newNestedSetLogTableRecordsValues,
                               List<List<Object>> updatedNestedSetLogTableRecordsValues,
+                              List<List<Object>> deletedNestedSetLogTableRecordsValues,
                               long latestNestedSetLogTableRecordId
     ) throws SQLException {
         log.info("Applying nested set table updates to the table {} with contents from the table {}", tableId, logTableId);
@@ -241,14 +265,21 @@ public class NestedSetRecordsSynchronizer {
         insertIntoNestedSetTable(connection,
                 logTableColumnNames,
                 logTablePrimaryKeyColumnIndex,
+                logTableOperationTypeColumnIndex,
                 newNestedSetLogTableRecordsValues);
 
         //    update existing entries in the nested set table
-        updatedNestedSetTable(connection,
+        updateNestedSetTable(connection,
                 logTableColumnNames,
                 logTablePrimaryKeyColumnIndex,
+                logTableOperationTypeColumnIndex,
                 logTableNestedSetNodeIdColumnIndex,
                 updatedNestedSetLogTableRecordsValues);
+
+        // delete entries from the nested set table
+        deleteFromNestedSetTable(connection,
+                logTableNestedSetNodeIdColumnIndex,
+                deletedNestedSetLogTableRecordsValues);
     }
 
     private void upsertLogOffset(Connection connection,
@@ -275,12 +306,16 @@ public class NestedSetRecordsSynchronizer {
     private void insertIntoNestedSetTable(Connection connection,
                                           List<String> columnNames,
                                           int logTablePrimaryKeyColumnIndex,
+                                          int logTableOperationTypeColumnIndex,
                                           List<List<Object>> nestedSetLogTableRecordsValues) throws SQLException {
+        if (nestedSetLogTableRecordsValues == null) return;
 
         List<ColumnId> columns = new ArrayList<>();
+        Set<Integer> excludedColumnIndexes = new HashSet<>(
+                asList(logTablePrimaryKeyColumnIndex, logTableOperationTypeColumnIndex));
         for (int i = 0; i < columnNames.size(); i++) {
             String columnName = columnNames.get(i);
-            if (logTablePrimaryKeyColumnIndex != i) {
+            if (!excludedColumnIndexes.contains(i)) {
                 columns.add(new ColumnId(tableId, columnName));
             }
         }
@@ -292,7 +327,7 @@ public class NestedSetRecordsSynchronizer {
             for (List<Object> nestedSetLogTableRecordValues : nestedSetLogTableRecordsValues) {
                 int parameterIndex = 1;
                 for (int i = 0; i < columnNames.size(); i++) {
-                    if (logTablePrimaryKeyColumnIndex != i) {
+                    if (!excludedColumnIndexes.contains(i)) {
                         stmt.setObject(parameterIndex++, nestedSetLogTableRecordValues.get(i));
                     }
                 }
@@ -303,17 +338,22 @@ public class NestedSetRecordsSynchronizer {
         }
     }
 
-    private void updatedNestedSetTable(Connection connection,
-                                       List<String> columnNames,
-                                       int logTablePrimaryKeyColumnIndex,
-                                       int logTableNestedSetNodeIdColumnIndex,
-                                       List<List<Object>> nestedSetLogTableRecordsValues) throws SQLException {
+    private void updateNestedSetTable(Connection connection,
+                                      List<String> columnNames,
+                                      int logTablePrimaryKeyColumnIndex,
+                                      int logTableOperationTypeColumnIndex,
+                                      int logTableNestedSetNodeIdColumnIndex,
+                                      List<List<Object>> nestedSetLogTableRecordsValues) throws SQLException {
+        if (nestedSetLogTableRecordsValues == null) return;
+
+        Set<Integer> excludedColumnIndexes = new HashSet<>(
+                asList(logTablePrimaryKeyColumnIndex, logTableOperationTypeColumnIndex));
 
         ColumnId keyColumn = new ColumnId(tableId, tablePrimaryKeyColumnName);
         List<ColumnId> nonKeyColumns = new ArrayList<>();
         for (int i = 0; i < columnNames.size(); i++) {
             String columnName = columnNames.get(i);
-            if (i != logTablePrimaryKeyColumnIndex && i != logTableNestedSetNodeIdColumnIndex) {
+            if (!excludedColumnIndexes.contains(i) && i != logTableNestedSetNodeIdColumnIndex) {
                 nonKeyColumns.add(new ColumnId(tableId, columnName));
             }
         }
@@ -324,7 +364,7 @@ public class NestedSetRecordsSynchronizer {
             for (List<Object> nestedSetLogTableRecordValues : nestedSetLogTableRecordsValues) {
                 int parameterIndex = 1;
                 for (int i = 0; i < columnNames.size(); i++) {
-                    if (i != logTablePrimaryKeyColumnIndex && i != logTableNestedSetNodeIdColumnIndex) {
+                    if (!excludedColumnIndexes.contains(i) && i != logTableNestedSetNodeIdColumnIndex) {
                         stmt.setObject(parameterIndex++, nestedSetLogTableRecordValues.get(i));
                     }
                 }
@@ -339,13 +379,33 @@ public class NestedSetRecordsSynchronizer {
     }
 
 
-    private static List<NestedSetNode> getUpdatedNestedSet(
+    private void deleteFromNestedSetTable(Connection connection,
+                                          int logTableNestedSetNodeIdColumnIndex,
+                                          List<List<Object>> nestedSetLogTableRecordsValues) throws SQLException {
+        if (nestedSetLogTableRecordsValues == null) return;
+
+        ColumnId keyColumn = new ColumnId(tableId, tablePrimaryKeyColumnName);
+        String sql = dbDialect.buildDeleteStatement(tableId, Collections.singletonList(keyColumn));
+        log.debug("Using DELETE SQL query: {}", sql);
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            for (List<Object> nestedSetLogTableRecordValues : nestedSetLogTableRecordsValues) {
+                stmt.setObject(1, nestedSetLogTableRecordValues.get(logTableNestedSetNodeIdColumnIndex));
+                stmt.addBatch();
+            }
+
+            stmt.executeBatch();
+        }
+    }
+
+    private List<NestedSetNode> getUpdatedNestedSet(
             List<List<Object>> nestedSetTableRecordsValues,
             Function<List<Object>, Long> getNestedSetTableRecordId,
             Function<List<Object>, Integer> getNestedSetTableRecordLeft,
             Function<List<Object>, Integer> getNestedSetTableRecordRight,
             List<List<Object>> nestedSetLogTableRecordsValues,
             Function<List<Object>, Long> getLogTableRecordNestedSetNodeId,
+            Function<List<Object>, Integer> getLogTableRecordOperationType,
             Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
             Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
         Map<Long, NestedSetNode> nestedSetNodeId2NestedSetNodeMap = nestedSetTableRecordsValues.stream()
@@ -364,18 +424,27 @@ public class NestedSetRecordsSynchronizer {
 
         // apply updates
         for (List<Object> nestedSetLogTableRecordValues : nestedSetLogTableRecordsValues) {
-            nestedSetNodeId2NestedSetNodeMap.put(getLogTableRecordNestedSetNodeId.apply(nestedSetLogTableRecordValues),
-                    new NestedSetNode() {
-                        @Override
-                        public int getLeft() {
-                            return getLogTableRecordNestedSetNodeLeft.apply(nestedSetLogTableRecordValues);
-                        }
+            Integer operationType = getLogTableRecordOperationType.apply(nestedSetLogTableRecordValues);
+            Long logTableRecordId = getLogTableRecordNestedSetNodeId.apply(nestedSetLogTableRecordValues);
+            if (OperationType.DELETE.ordinal() == operationType) {
+                nestedSetNodeId2NestedSetNodeMap.remove(logTableRecordId);
+            } else if (OperationType.UPSERT.ordinal() == operationType) {
+                nestedSetNodeId2NestedSetNodeMap.put(logTableRecordId,
+                        new NestedSetNode() {
+                            @Override
+                            public int getLeft() {
+                                return getLogTableRecordNestedSetNodeLeft.apply(nestedSetLogTableRecordValues);
+                            }
 
-                        @Override
-                        public int getRight() {
-                            return getLogTableRecordNestedSetNodeRight.apply(nestedSetLogTableRecordValues);
-                        }
-                    });
+                            @Override
+                            public int getRight() {
+                                return getLogTableRecordNestedSetNodeRight.apply(nestedSetLogTableRecordValues);
+                            }
+                        });
+            } else {
+                throw new IllegalStateException("Invalid operation type " + operationType +
+                        " retrieved for the ID " + logTableRecordId + " in the table " + logTableId);
+            }
         }
 
         return new ArrayList<>(nestedSetNodeId2NestedSetNodeMap.values());
@@ -391,7 +460,7 @@ public class NestedSetRecordsSynchronizer {
         return left != null && right != null && left < right;
     }
 
-    private static Long getColumnAsLong(List<Object> recordValues, int index) {
+    private static Long getColumnValueAsLong(List<Object> recordValues, int index) {
         Number number = ((Number) recordValues.get(index));
         return number == null ? null : number.longValue();
     }

@@ -16,7 +16,7 @@
 package com.findinpath.connect.nestedset.jdbc.sink;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
-import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect.StatementBinder;
+import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect.LogTableStatementBinder;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.FieldsMetadata;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.SchemaPair;
 import com.findinpath.connect.nestedset.jdbc.util.ColumnId;
@@ -26,10 +26,13 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -57,9 +60,8 @@ public class BufferedRecords {
   private FieldsMetadata fieldsMetadata;
   private PreparedStatement updatePreparedStatement;
   private PreparedStatement deletePreparedStatement;
-  private StatementBinder updateStatementBinder;
-  private StatementBinder deleteStatementBinder;
-  private boolean deletesInBatch = false;
+  private LogTableStatementBinder updateLogTableStatementBinder;
+  private LogTableStatementBinder deleteLogTableStatementBinder;
 
   public BufferedRecords(
       JdbcSinkConfig config,
@@ -85,19 +87,7 @@ public class BufferedRecords {
       keySchema = record.keySchema();
       schemaChanged = true;
     }
-    if (isNull(record.valueSchema())) {
-      // For deletes, value and optionally value schema come in as null.
-      // We don't want to treat this as a schema change if key schemas is the same
-      // otherwise we flush unnecessarily.
-      if (config.deleteEnabled) {
-        deletesInBatch = true;
-      }
-    } else if (Objects.equals(valueSchema, record.valueSchema())) {
-      if (config.deleteEnabled && deletesInBatch) {
-        // flush so an insert after a delete of same record isn't lost
-        flushed.addAll(flush());
-      }
-    } else {
+    if (!isNull(record.valueSchema()) && !Objects.equals(valueSchema, record.valueSchema())) {
       // value schema is not null and has changed. This is a real schema change.
       valueSchema = record.valueSchema();
       schemaChanged = true;
@@ -118,13 +108,17 @@ public class BufferedRecords {
           config.fieldsWhitelist,
           schemaPair
       );
-      dbStructure.createOrAmendIfNecessary(
+      boolean dbStructureAltered = dbStructure.createOrAmendIfNecessary(
           config,
           connection,
           tableId,
           logTableId,
           fieldsMetadata
       );
+      if (dbStructureAltered) {
+        log.info("Db structure on the tables {} and {} was altered", tableId, logTableId);
+      }
+
       final String insertSql = getInsertSql();
       final String deleteSql = getDeleteSql();
       log.debug(
@@ -135,7 +129,7 @@ public class BufferedRecords {
       );
       close();
       updatePreparedStatement = dbDialect.createPreparedStatement(connection, insertSql);
-      updateStatementBinder = dbDialect.statementBinder(
+      updateLogTableStatementBinder = dbDialect.statementBinder(
           updatePreparedStatement,
           config.pkMode,
           schemaPair,
@@ -143,18 +137,13 @@ public class BufferedRecords {
       );
       if (config.deleteEnabled && nonNull(deleteSql)) {
         deletePreparedStatement = dbDialect.createPreparedStatement(connection, deleteSql);
-        deleteStatementBinder = dbDialect.statementBinder(
+        deleteLogTableStatementBinder = dbDialect.statementBinder(
             deletePreparedStatement,
             config.pkMode,
             schemaPair,
             fieldsMetadata
         );
       }
-    }
-    
-    // set deletesInBatch if schema value is not null
-    if (isNull(record.value()) && config.deleteEnabled) {
-      deletesInBatch = true;
     }
 
     records.add(record);
@@ -172,10 +161,10 @@ public class BufferedRecords {
     }
     log.debug("Flushing {} buffered records", records.size());
     for (SinkRecord record : records) {
-      if (isNull(record.value()) && nonNull(deleteStatementBinder)) {
-        deleteStatementBinder.bindRecord(record);
+      if (isNull(record.value()) && nonNull(deleteLogTableStatementBinder)) {
+        deleteLogTableStatementBinder.bindRecord(record, OperationType.DELETE);
       } else {
-        updateStatementBinder.bindRecord(record);
+        updateLogTableStatementBinder.bindRecord(record, OperationType.UPSERT);
       }
     }
     Optional<Long> totalUpdateCount = executeUpdates();
@@ -201,7 +190,6 @@ public class BufferedRecords {
 
     final List<SinkRecord> flushedRecords = records;
     records = new ArrayList<>();
-    deletesInBatch = false;
     return flushedRecords;
   }
 
@@ -257,40 +245,25 @@ public class BufferedRecords {
   }
 
   private String getInsertSql() {
+    Set<String> nonKeyFieldNames = fieldsMetadata.nonKeyFieldNames;
+    List<String> allLogTableNonKeyFieldNames = new ArrayList<>();
+    allLogTableNonKeyFieldNames.add(config.logTableOperationTypeColumnName);
+    allLogTableNonKeyFieldNames.addAll(nonKeyFieldNames);
+
+
     return dbDialect.buildInsertStatement(
         logTableId,
         asColumns(fieldsMetadata.keyFieldNames),
-        asColumns(fieldsMetadata.nonKeyFieldNames)
+        asColumns(allLogTableNonKeyFieldNames)
     );
   }
 
   private String getDeleteSql() {
-    String sql = null;
-    if (config.deleteEnabled) {
-      switch (config.pkMode) {
-        case RECORD_KEY:
-          if (fieldsMetadata.keyFieldNames.isEmpty()) {
-            throw new ConnectException("Require primary keys to support delete");
-          }
-          try {
-            sql = dbDialect.buildDeleteStatement(
-                tableId,
-                asColumns(fieldsMetadata.keyFieldNames)
-            );
-          } catch (UnsupportedOperationException e) {
-            throw new ConnectException(String.format(
-                "Deletes to table '%s' are not supported with the %s dialect.",
-                tableId,
-                dbDialect.name()
-            ));
-          }
-          break;
-
-        default:
-          throw new ConnectException("Deletes are only supported for pk.mode record_key");
-      }
-    }
-    return sql;
+    return dbDialect.buildInsertStatement(
+            logTableId,
+            asColumns(fieldsMetadata.keyFieldNames),
+            asColumns(Arrays.asList(config.logTableOperationTypeColumnName))
+    );
   }
 
   private Collection<ColumnId> asColumns(Collection<String> names) {

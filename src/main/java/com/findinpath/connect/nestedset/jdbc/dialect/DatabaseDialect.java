@@ -16,6 +16,8 @@
 package com.findinpath.connect.nestedset.jdbc.dialect;
 
 import com.findinpath.connect.nestedset.jdbc.sink.ColumnMapping;
+import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode;
+import com.findinpath.connect.nestedset.jdbc.sink.OperationType;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.FieldsMetadata;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.SchemaPair;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.SinkRecordField;
@@ -26,8 +28,13 @@ import com.findinpath.connect.nestedset.jdbc.util.ExpressionBuilder;
 import com.findinpath.connect.nestedset.jdbc.util.IdentifierRules;
 import com.findinpath.connect.nestedset.jdbc.util.TableDefinition;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
-import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.InsertMode;
-import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode;
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.sink.SinkRecord;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -39,12 +46,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.sink.SinkRecord;
 
 /**
  * A component that is used to map datatypes and queries for JDBC sources. Every dialect should be
@@ -381,10 +382,14 @@ public interface DatabaseDialect extends ConnectionProvider {
    *
    * @param table  the identifier of the nested set log table; may not be null
    * @param primaryKeyColumnName the name used for the primary key column in the log table.
+   * @param operationTypeColumnName the name used for the operation type (upsert/delete) column in the log table.
    * @param fields the information about the fields in the sink records; may not be null
    * @return the statements needed for creating the log table; may not be null
    */
-  List<String> buildCreateLogTableStatements(TableId table, String primaryKeyColumnName, Collection<SinkRecordField> fields);
+  List<String> buildCreateLogTableStatements(TableId table,
+                                             String primaryKeyColumnName,
+                                             String operationTypeColumnName,
+                                             Collection<SinkRecordField> fields);
 
   /**
    * Build the CREATE TABLE statement(s) expression for the given nested set log offset table and its columns.
@@ -405,6 +410,8 @@ public interface DatabaseDialect extends ConnectionProvider {
    */
   List<String> buildAlterTable(TableId table, Collection<SinkRecordField> fields);
 
+  List<String> buildAlterLogTable(TableId table, Collection<SinkRecordField> fields);
+
   /**
    * Create a component that can bind record values into the supplied prepared statement.
    *
@@ -415,7 +422,7 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @return the statement binder; may not be null
    * @see #bindField(PreparedStatement, int, Schema, Object)
    */
-  StatementBinder statementBinder(
+  LogTableStatementBinder statementBinder(
       PreparedStatement statement,
       PrimaryKeyMode pkMode,
       SchemaPair schemaPair,
@@ -451,15 +458,16 @@ public interface DatabaseDialect extends ConnectionProvider {
      * A function to bind the values from a sink record into a prepared statement.
      */
   @FunctionalInterface
-  interface StatementBinder {
+  interface LogTableStatementBinder {
 
     /**
      * Bind the values in the supplied record.
      *
      * @param record the sink record with values to be bound into the statement; never null
+     * @param operationType the operation to be done (upsert/delete); never null
      * @throws SQLException if there is a problem binding values into the statement
      */
-    void bindRecord(SinkRecord record) throws SQLException;
+    void bindRecord(SinkRecord record, OperationType operationType) throws SQLException;
   }
 
   /**
