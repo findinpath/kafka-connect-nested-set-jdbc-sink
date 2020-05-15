@@ -199,7 +199,7 @@ public class MySqlDatabaseDialect extends GenericDatabaseDialect {
     builder.append(" (");
 
     builder.appendColumnName(logTableColumnName).append(" VARCHAR(256) NOT NULL, ");
-    builder.appendColumnName(offsetColumnName).append(" INT NOT NULL, ");
+    builder.appendColumnName(offsetColumnName).append(" BIGINT NOT NULL, ");
     builder.append("PRIMARY KEY (").appendColumnName(logTableColumnName).append(")");
     builder.append(")");
     return builder.toString();
