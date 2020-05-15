@@ -38,7 +38,6 @@ public class NestedSetRecordsSynchronizer {
 
     private final JdbcSinkConfig config;
     private final DatabaseDialect dbDialect;
-    private final CachedConnectionProvider cachedConnectionProvider;
     private final TableId tableId;
     private final String tablePrimaryKeyColumnName;
     private final String tableLeftColumnName;
@@ -77,29 +76,9 @@ public class NestedSetRecordsSynchronizer {
                 new ColumnId(logOffsetTableId, config.logOffsetTableOffsetColumnName));
 
         nestedSetTableQuerier = new BulkTableQuerier(dbDialect, tableId);
-
-        this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
-            @Override
-            protected void onConnect(Connection connection) throws SQLException {
-                log.info("NestedSetRecordsSynchronizer connected");
-                connection.setAutoCommit(false);
-            }
-        };
     }
 
-    public void synchronizeRecords() throws SQLException {
-        final Connection connection = cachedConnectionProvider.getConnection();
-
-        try {
-            synchronizeRecords(connection);
-        } catch (SQLException e) {
-            connection.rollback();
-            throw e;
-        }
-        connection.commit();
-    }
-
-    private void synchronizeRecords(Connection connection) throws SQLException {
+    public void synchronizeRecords(Connection connection) throws SQLException {
 
         // get nested set log entries
         ResultSetRecords nestedSetLogTableUpdates = nestedSetLogTableQuerier.extractRecordsForSynchronization(connection);

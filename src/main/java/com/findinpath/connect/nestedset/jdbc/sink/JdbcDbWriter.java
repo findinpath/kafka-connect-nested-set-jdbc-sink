@@ -35,7 +35,9 @@ public class JdbcDbWriter {
   private final DbStructure dbStructure;
   private final TableId tableId;
   private final TableId logTableId;
+  final NestedSetRecordsSynchronizer nestedSetRecordsSynchronizer;
   final CachedConnectionProvider cachedConnectionProvider;
+
 
   JdbcDbWriter(final JdbcSinkConfig config, DatabaseDialect dbDialect, DbStructure dbStructure) {
     this.config = config;
@@ -52,6 +54,9 @@ public class JdbcDbWriter {
         connection.setAutoCommit(false);
       }
     };
+
+    nestedSetRecordsSynchronizer = new NestedSetRecordsSynchronizer(config, dbDialect);
+
   }
 
   void write(final Collection<SinkRecord> records) throws SQLException {
@@ -68,8 +73,10 @@ public class JdbcDbWriter {
 
       log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
       buffer.flush();
-
       buffer.close();
+
+      log.debug("Synchronizing pending nested set records");
+      nestedSetRecordsSynchronizer.synchronizeRecords(connection);
 
       connection.commit();
     }catch(SQLException e){

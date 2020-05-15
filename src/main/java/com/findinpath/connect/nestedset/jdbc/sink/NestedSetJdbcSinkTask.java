@@ -39,7 +39,6 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   DatabaseDialect dialect;
   JdbcSinkConfig config;
   JdbcDbWriter writer;
-  NestedSetRecordsSynchronizer nestedSetRecordsSynchronizer;
 
   int remainingRetries;
 
@@ -55,9 +54,6 @@ public class NestedSetJdbcSinkTask extends SinkTask {
       dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
     }
     log.info("using SQL dialect: {}", dialect.getClass().getSimpleName());
-    nestedSetRecordsSynchronizer = new NestedSetRecordsSynchronizer(config, dialect);
-    log.info("Synchronizing eventual pending nested set records");
-    synchronizePendingNestedSetRecords();
 
     initWriter();
     remainingRetries = config.maxRetries;
@@ -83,7 +79,6 @@ public class NestedSetJdbcSinkTask extends SinkTask {
     );
     try {
       writer.write(records);
-      nestedSetRecordsSynchronizer.synchronizeRecords();
     } catch (SQLException sqle) {
       log.warn(
           "Write of {} records failed, remainingRetries={}",
@@ -135,16 +130,5 @@ public class NestedSetJdbcSinkTask extends SinkTask {
   @Override
   public String version() {
     return getClass().getPackage().getImplementationVersion();
-  }
-
-  private void synchronizePendingNestedSetRecords(){
-    TableId tableId = dialect.parseTableIdentifier(config.tableName);
-    try(Connection connection = dialect.getConnection()) {
-      if (dialect.tableExists(connection, tableId)){
-        nestedSetRecordsSynchronizer.synchronizeRecords();
-      }
-    }catch(SQLException e){
-      throw new ConnectException(e);
-    }
   }
 }
