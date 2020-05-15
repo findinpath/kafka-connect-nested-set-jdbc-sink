@@ -171,6 +171,8 @@ public class NestedSetRecordsSynchronizer {
                     deletedNestedSetRecordsSortedByLogId,
                     latestNestedSetLogTableRecordId
             );
+        } else{
+            log.info("The pending entries from "+logTableId + " can't be synchronized because the resulting structure is not a nested set");
         }
     }
 

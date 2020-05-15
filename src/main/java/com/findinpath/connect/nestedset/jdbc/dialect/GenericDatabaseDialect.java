@@ -1595,7 +1595,7 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
 
     List<SinkRecordField> fields = new ArrayList<>();
     fields.add(new SinkRecordField(Schema.STRING_SCHEMA, logTableColumnName, true));
-    fields.add(new SinkRecordField(Schema.INT32_SCHEMA, offsetColumnName, false));
+    fields.add(new SinkRecordField(Schema.INT64_SCHEMA, offsetColumnName, false));
     writeColumnsSpec(builder, fields);
     builder.append(", PRIMARY KEY (").appendColumnName(logTableColumnName).append(")");
     builder.append(")");

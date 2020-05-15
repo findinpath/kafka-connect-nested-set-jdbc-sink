@@ -5,19 +5,16 @@ import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialects;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.AUTO_CREATE;
@@ -27,98 +24,195 @@ import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.CONNECTI
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.CONNECTION_USER;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.LOG_TABLE_NAME;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.TABLE_NAME;
+import static java.util.Collections.singleton;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-@Testcontainers
-public class JdbcDbWriterTest {
-
-    protected static final String POSTGRES_DB_NAME = "findinpath";
-    protected static final String POSTGRES_NETWORK_ALIAS = "postgres";
-    protected static final String POSTGRES_DB_USERNAME = "sa";
-    protected static final String POSTGRES_DB_PASSWORD = "p@ssw0rd!";
-
+public abstract class JdbcDbWriterTest {
+    protected static final String NESTED_SET_TABLE_NAME = "nested_set";
+    protected static final String NESTED_SET_LOG_TABLE_NAME = "nested_set_log";
+    protected static final String NESTED_SET_LOG_OFFSET_TABLE_NAME = "nested_set_sync_log_offset";
 
     protected static final String TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT = "id";
     protected static final String TABLE_LEFT_COLUMN_NAME_DEFAULT = "lft";
     protected static final String TABLE_RIGHT_COLUMN_NAME_DEFAULT = "rgt";
+    protected static final String TABLE_LABEL_COLUMN_NAME = "label";
+    protected static final String TABLE_MODIFIED_COLUMN_NAME = "modified";
 
+    protected static final String TOPIC = "nested-set";
 
-    @Container
-    protected static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer<>("postgres:12")
-            .withNetworkAliases(POSTGRES_NETWORK_ALIAS)
-            .withInitScript("sink/postgres/init_postgres.sql")
-            .withDatabaseName(POSTGRES_DB_NAME)
-            .withUsername(POSTGRES_DB_USERNAME)
-            .withPassword(POSTGRES_DB_PASSWORD);
+    protected static final Schema NESTED_SET_INCREMENTED_SCHEMA = SchemaBuilder.struct()
+            .field(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, Schema.INT64_SCHEMA)
+            .field(TABLE_LEFT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+            .field(TABLE_RIGHT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+            .field(TABLE_LABEL_COLUMN_NAME, Schema.STRING_SCHEMA)
+            .build();
 
-    private JdbcDbWriter jdbcDbWriter;
+    protected static final Schema NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA = SchemaBuilder.struct()
+            .field(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, Schema.INT64_SCHEMA)
+            .field(TABLE_LEFT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+            .field(TABLE_RIGHT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+            .field(TABLE_LABEL_COLUMN_NAME, Schema.STRING_SCHEMA)
+            .field(TABLE_MODIFIED_COLUMN_NAME, Timestamp.SCHEMA)
+            .build();
 
     private JdbcHelper jdbcHelper;
 
-    @BeforeEach
-    public void setup() throws SQLException {
 
+    protected abstract String getJdbcUrl();
+
+    protected abstract String getJdbcUsername();
+
+    protected abstract String getJdbcPassword();
+
+    protected JdbcDbWriter createJdbcDbWriter(boolean autoCreate,
+                                              boolean autoEvolve) {
         Map<String, String> props = new HashMap<>();
-        props.put(AUTO_CREATE, "true");
-        props.put(AUTO_EVOLVE, "true");
-        props.put(TABLE_NAME, "nested_set");
-
-        props.put(LOG_TABLE_NAME, "nested_set_log");
-        props.put(CONNECTION_URL, postgreSQLContainer.getJdbcUrl());
-        props.put(CONNECTION_USER, POSTGRES_DB_USERNAME);
-        props.put(CONNECTION_PASSWORD, POSTGRES_DB_PASSWORD);
+        props.put(AUTO_CREATE, String.valueOf(autoCreate));
+        props.put(AUTO_EVOLVE, String.valueOf(autoEvolve));
+        props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
+        props.put(LOG_TABLE_NAME, NESTED_SET_LOG_TABLE_NAME);
+        props.put(CONNECTION_URL, getJdbcUrl());
+        props.put(CONNECTION_USER, getJdbcUsername());
+        props.put(CONNECTION_PASSWORD, getJdbcPassword());
 
         JdbcSinkConfig config = new JdbcSinkConfig(props);
         DatabaseDialect dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
         final DbStructure dbStructure = new DbStructure(dialect);
 
-        jdbcDbWriter = new JdbcDbWriter(config, dialect, dbStructure);
+        return new JdbcDbWriter(config, dialect, dbStructure);
+    }
 
-        jdbcHelper = new JdbcHelper(postgreSQLContainer.getJdbcUrl(), POSTGRES_DB_USERNAME, POSTGRES_DB_PASSWORD);
+    @BeforeEach
+    public void setup() throws SQLException {
+        jdbcHelper = new JdbcHelper(getJdbcUrl(), getJdbcUsername(), getJdbcPassword());
+        jdbcHelper.execute("DROP TABLE IF EXISTS " + NESTED_SET_TABLE_NAME);
+        jdbcHelper.execute("DROP TABLE IF EXISTS " + NESTED_SET_LOG_TABLE_NAME);
+        jdbcHelper.execute("DELETE FROM " + NESTED_SET_LOG_OFFSET_TABLE_NAME);
+
     }
 
     @Test
     public void autoCreateAccuracy() throws SQLException {
-        String topic = "nested-set";
+        JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true);
+        Schema keySchema = Schema.INT64_SCHEMA;
+
+        long rootId = 1L;
+        Struct rootStruct = createNestedSetIncrementedStruct(rootId, 1, 2, "Root");
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                keySchema, rootId,
+                NESTED_SET_INCREMENTED_SCHEMA, rootStruct, 0)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 1);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
+    }
+
+
+    @Test
+    public void nestedSetSynchronizationEventuallyTakesPlace() throws SQLException {
+        JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true);
+
+        Schema keySchema = Schema.INT64_SCHEMA;
+        long rootId = 1L;
+        long childId = 2L;
+        Struct rootStruct = createNestedSetIncrementedStruct(rootId, 1, 4, "Root");
+        Struct childStruct = createNestedSetIncrementedStruct(childId, 2, 3, "Child");
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                keySchema, rootId,
+                NESTED_SET_INCREMENTED_SCHEMA, rootStruct, 0)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 1);
+        assertTableSize(NESTED_SET_TABLE_NAME, 0);
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                keySchema, childId,
+                NESTED_SET_INCREMENTED_SCHEMA, childStruct, 1)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 2);
+        assertTableSize(NESTED_SET_TABLE_NAME, 2);
+        assertOffsetAccuracyForSynchronizedRecords();
+    }
+
+
+    @Test
+    public void nestedSetSynchronizationEventuallyUpdatesExistingNodes() throws SQLException {
+        JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true);
 
         Schema keySchema = Schema.INT64_SCHEMA;
 
         long rootId = 1L;
-        Schema valueSchema = SchemaBuilder.struct()
-                .field(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, Schema.INT64_SCHEMA)
-                .field(TABLE_LEFT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
-                .field(TABLE_RIGHT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
-                .field("label", Schema.STRING_SCHEMA)
-                .build();
+        long childId = 2L;
+        Struct rootStruct = createNestedSetTimestampIncrementedStruct(rootId, 1, 2, "Root", 1474661401000L);
 
-        Struct valueStruct = new Struct(valueSchema)
-                .put(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, rootId)
-                .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, 1)
-                .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, 2)
-                .put("label", "Food");
-
-        jdbcDbWriter.write(Collections.singleton(new SinkRecord(topic, 0,
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
                 keySchema, rootId,
-                valueSchema, valueStruct, 0)));
+                NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, rootStruct, 0)));
 
-        int nestedSetLogEntriesCount = jdbcHelper.select("select count(*) from nested_set_log", rs -> { });
-        assertThat(nestedSetLogEntriesCount, equalTo(1));
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 1);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
 
-        int nestedSetEntriesCount = jdbcHelper.select("select count(*) from nested_set", rs -> { });
-        assertThat(nestedSetEntriesCount, equalTo(1));
+        Struct childStruct = createNestedSetTimestampIncrementedStruct(childId, 2, 3, "Child", 1474661402000L);
+        Struct updatedRootStruct = createNestedSetTimestampIncrementedStruct(rootId, 1, 4, "Root", 1474661402000L);
 
+        jdbcDbWriter.write(Arrays.asList(
+                new SinkRecord(TOPIC, 0, keySchema, childId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, childStruct, 1),
+                new SinkRecord(TOPIC, 0, keySchema, rootId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, updatedRootStruct, 2)
+                )
+        );
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 3);
+        assertTableSize(NESTED_SET_TABLE_NAME, 2);
+        assertOffsetAccuracyForSynchronizedRecords();
+    }
+
+    private Struct createNestedSetIncrementedStruct(long id, int left, int right, String label) {
+        return new Struct(NESTED_SET_INCREMENTED_SCHEMA)
+                .put(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, id)
+                .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, left)
+                .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, right)
+                .put(TABLE_LABEL_COLUMN_NAME, label);
+    }
+
+    private Struct createNestedSetTimestampIncrementedStruct(long id, int left, int right, String label, long instantMilliseconds) {
+        return new Struct(NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA)
+                .put(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, id)
+                .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, left)
+                .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, right)
+                .put(TABLE_LABEL_COLUMN_NAME, label)
+                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(instantMilliseconds));
+    }
+
+    private void assertOffsetAccuracyForSynchronizedRecords() throws SQLException {
+        long logOffset = getLogOffset();
+        long maxNestedSetLogId = getMaxNestedSetLogId();
+        assertThat("The recorded offset should match the max log_id of the tuples from " + NESTED_SET_LOG_TABLE_NAME + " table",
+                logOffset, equalTo(maxNestedSetLogId));
+    }
+
+
+    private void assertTableSize(String tableName, int size) throws SQLException {
+        jdbcHelper.select("select count(*) from " + tableName, rs -> {
+            assertThat(rs.getInt(1), equalTo(size));
+        });
+    }
+
+    private long getLogOffset() throws SQLException {
         AtomicLong offset = new AtomicLong(0);
-        jdbcHelper.select("select log_table_offset from nested_set_sync_log_offset where log_table_name='nested_set_log'", rs -> {
+        jdbcHelper.select("select log_table_offset from nested_set_sync_log_offset where log_table_name='" + NESTED_SET_LOG_TABLE_NAME + "'", rs -> {
             offset.set(rs.getLong(1));
         });
+        return offset.get();
+    }
 
+    private long getMaxNestedSetLogId() throws SQLException {
         AtomicLong maxNestedSetLogId = new AtomicLong(0);
-        jdbcHelper.select("select max(log_id) from nested_set_log", rs -> {
+        jdbcHelper.select("select max(log_id) from " + NESTED_SET_LOG_TABLE_NAME, rs -> {
             maxNestedSetLogId.set(rs.getLong(1));
         });
-        assertThat("The recorded offset should match the max log_id of the tuples from nested_set_log table",
-                offset.get(), equalTo(maxNestedSetLogId.get()));
+        return maxNestedSetLogId.get();
     }
 }

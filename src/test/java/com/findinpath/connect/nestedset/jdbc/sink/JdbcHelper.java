@@ -37,7 +37,6 @@ public class JdbcHelper {
     public void execute(String sql) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql);
-            connection.commit();
         }
     }
 }
