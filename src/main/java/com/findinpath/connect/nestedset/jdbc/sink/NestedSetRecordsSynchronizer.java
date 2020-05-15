@@ -110,8 +110,8 @@ public class NestedSetRecordsSynchronizer {
                 getLogTableRecordId, getLogTableRecordNestedSetNodeId);
         log.info("Outstanding deduplicated nested set log entries in the table {} to be synchronized {}", logTableId, deduplicatedNestedSetLogTableRecords.size());
 
-        if (!isValidNestedSetNodeContent(deduplicatedNestedSetLogTableRecords, logTableId,
-                getLogTableRecordId, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
+        if (!isValidNestedSetLogNodeContent(deduplicatedNestedSetLogTableRecords, logTableId,
+                getLogTableRecordId, getLogTableOperationType, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
             return;
         }
 
@@ -189,6 +189,27 @@ public class NestedSetRecordsSynchronizer {
             }
         }
         return new ArrayList<>(nestedSetNodeId2LatestLogTableRecordValues.values());
+    }
+
+    private boolean isValidNestedSetLogNodeContent(List<List<Object>> recordsValues,
+                                                TableId tableId,
+                                                Function<List<Object>, Long> getTableRecordId,
+                                                Function<List<Object>, Integer> getLogTableOperationType,
+                                                Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
+                                                Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
+        boolean invalidNestedSetTableRecordsFound = false;
+        for (List<Object> recordValues : recordsValues) {
+            int operationType = getLogTableOperationType.apply(recordValues);
+            if (OperationType.DELETE.ordinal() == operationType){
+                continue;
+            }
+            Long id = getTableRecordId.apply(recordValues);
+            if (!isValidNestedSetNode(recordValues, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight)) {
+                invalidNestedSetTableRecordsFound = true;
+                log.error("The entry with the ID {} of the table {} contains invalid nested set coordinates", tableId, id);
+            }
+        }
+        return !invalidNestedSetTableRecordsFound;
     }
 
     private boolean isValidNestedSetNodeContent(List<List<Object>> recordsValues,

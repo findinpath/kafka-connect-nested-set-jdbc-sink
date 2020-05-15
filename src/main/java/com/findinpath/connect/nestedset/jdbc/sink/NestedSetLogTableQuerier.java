@@ -4,6 +4,7 @@ import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
 import com.findinpath.connect.nestedset.jdbc.sink.metadata.ResultSetRecords;
 import com.findinpath.connect.nestedset.jdbc.util.ColumnId;
 import com.findinpath.connect.nestedset.jdbc.util.ExpressionBuilder;
+import com.findinpath.connect.nestedset.jdbc.util.QuoteMethod;
 import com.findinpath.connect.nestedset.jdbc.util.TableId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,12 @@ public class NestedSetLogTableQuerier {
     }
 
     private ResultSet executeQuery(PreparedStatement stmt) throws SQLException {
-        stmt.setString(1, logOffsetTableId.toString());
+        String logTableName = ExpressionBuilder.create()
+                .setQuoteIdentifiers(QuoteMethod.NEVER)
+                .append(logTableId)
+                .toString();
+
+        stmt.setString(1, logTableName);
         log.trace("Statement to execute: {}", stmt.toString());
         return stmt.executeQuery();
     }
@@ -78,7 +84,7 @@ public class NestedSetLogTableQuerier {
                 logOffsetTableId, logOffsetTableLogTableColumn, logOffsetTableOffsetColumn);
 
         String query = builder.toString();
-        log.info("Begin using SQL query: {}", query);
+        log.debug("Using SQL query: {}", query);
 
         return dialect.createPreparedStatement(db, query);
     }

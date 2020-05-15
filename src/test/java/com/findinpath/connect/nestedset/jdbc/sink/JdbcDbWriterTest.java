@@ -22,8 +22,13 @@ import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.AUTO_EVO
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.CONNECTION_PASSWORD;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.CONNECTION_URL;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.CONNECTION_USER;
+import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.DELETE_ENABLED;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.LOG_TABLE_NAME;
+import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PK_FIELDS;
+import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PK_MODE;
+import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.TABLE_NAME;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -67,9 +72,21 @@ public abstract class JdbcDbWriterTest {
 
     protected JdbcDbWriter createJdbcDbWriter(boolean autoCreate,
                                               boolean autoEvolve) {
-        Map<String, String> props = new HashMap<>();
+        return createJdbcDbWriter(autoCreate,autoEvolve,false);
+    }
+
+
+    protected JdbcDbWriter createJdbcDbWriter(boolean autoCreate,
+                                              boolean autoEvolve,
+                                              boolean deleteEnabled) {
+        Map<String, Object> props = new HashMap<>();
         props.put(AUTO_CREATE, String.valueOf(autoCreate));
         props.put(AUTO_EVOLVE, String.valueOf(autoEvolve));
+        props.put(DELETE_ENABLED, String.valueOf(deleteEnabled));
+        if (deleteEnabled){
+            props.put(PK_MODE, String.valueOf(RECORD_KEY));
+            props.put(PK_FIELDS, Arrays.asList(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT));
+        }
         props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
         props.put(LOG_TABLE_NAME, NESTED_SET_LOG_TABLE_NAME);
         props.put(CONNECTION_URL, getJdbcUrl());
@@ -158,7 +175,7 @@ public abstract class JdbcDbWriterTest {
         Struct childStruct = createNestedSetTimestampIncrementedStruct(childId, 2, 3, "Child", 1474661402000L);
         Struct updatedRootStruct = createNestedSetTimestampIncrementedStruct(rootId, 1, 4, "Root", 1474661402000L);
 
-        jdbcDbWriter.write(Arrays.asList(
+        jdbcDbWriter.write(asList(
                 new SinkRecord(TOPIC, 0, keySchema, childId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, childStruct, 1),
                 new SinkRecord(TOPIC, 0, keySchema, rootId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, updatedRootStruct, 2)
                 )
@@ -216,6 +233,38 @@ public abstract class JdbcDbWriterTest {
                             assertThat(rs.getBoolean(1), equalTo(true));
                         }),
                 equalTo(1));
+    }
+
+    @Test
+    public void deletionAccuracy() throws SQLException {
+        JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true, true);
+
+        Schema keySchema = Schema.INT64_SCHEMA;
+        long rootId = 1L;
+        long childId = 2L;
+        Struct rootStruct = createNestedSetTimestampIncrementedStruct(rootId, 1, 4, "Root", 1474661401000L);
+        Struct childStruct = createNestedSetTimestampIncrementedStruct(childId, 2, 3, "Child", 1474661401000L);
+
+        jdbcDbWriter.write(asList(
+                new SinkRecord(TOPIC, 0, keySchema, rootId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, rootStruct, 0),
+                new SinkRecord(TOPIC, 0, keySchema, childId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, childStruct, 1)
+        ));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 2);
+        assertTableSize(NESTED_SET_TABLE_NAME, 2);
+        assertOffsetAccuracyForSynchronizedRecords();
+
+        Struct updatedChildStruct = createNestedSetTimestampIncrementedStruct(childId, 1, 2, "Child", 1474661402000L);
+
+
+        jdbcDbWriter.write(asList(
+                new SinkRecord(TOPIC, 0, keySchema, rootId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, null, 2),
+                new SinkRecord(TOPIC, 0, keySchema, childId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, updatedChildStruct, 3)
+        ));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 4);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
     }
 
     private Struct createNestedSetIncrementedStruct(long id, int left, int right, String label) {

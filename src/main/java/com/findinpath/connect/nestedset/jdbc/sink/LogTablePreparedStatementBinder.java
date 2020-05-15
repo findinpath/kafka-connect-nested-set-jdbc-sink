@@ -63,11 +63,9 @@ public class LogTablePreparedStatementBinder implements LogTableStatementBinder 
     //             keyFieldNames, in iteration order for all UPDATE queries
 
     int index = 1;
+    index = bindKeyFields(record, index);
     bindField(index++, Schema.INT32_SCHEMA, operationType.ordinal());
-    if (isDelete) {
-      bindKeyFields(record, index);
-    } else {
-      index = bindKeyFields(record, index);
+    if (!isDelete) {
       bindNonKeyFields(record, valueStruct, index);
     }
     statement.addBatch();
