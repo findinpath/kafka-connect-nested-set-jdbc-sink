@@ -96,6 +96,9 @@ public class NestedSetJdbcSinkConnector extends SinkConnector {
     }
   }
 
+
+
+
   private DatabaseDialect getDatabaseDialect(JdbcSinkConfig config){
     if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
       return DatabaseDialects.create(config.dialectName, config);

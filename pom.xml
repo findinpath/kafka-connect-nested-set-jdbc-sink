@@ -35,6 +35,7 @@
     <awaitility.version>4.0.2</awaitility.version>
 
     <testcontainers.version>1.14.1</testcontainers.version>
+    <postgresql.version>42.2.11</postgresql.version>
 
   </properties>
 
@@ -91,6 +92,13 @@
       <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -98,15 +106,20 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
         <inherited>true</inherited>
         <configuration>
           <compilerArgs>
             <arg>-Xlint:all</arg>
-            <arg>-Werror</arg>
           </compilerArgs>
           <source>${java.version}</source>
           <target>${java.version}</target>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M4</version>
       </plugin>
       <plugin>
         <groupId>io.confluent</groupId>
@@ -184,7 +197,6 @@
           </descriptors>
           <archive>
             <manifest>
-              <mainClass>Baluba</mainClass>
               <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
             </manifest>
           </archive>
