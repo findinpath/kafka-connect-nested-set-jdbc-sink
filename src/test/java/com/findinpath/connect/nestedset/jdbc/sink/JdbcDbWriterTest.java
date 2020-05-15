@@ -169,6 +169,55 @@ public abstract class JdbcDbWriterTest {
         assertOffsetAccuracyForSynchronizedRecords();
     }
 
+
+    @Test
+    public void autoEvolutionAccuracy() throws SQLException {
+        JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true);
+
+        Schema keySchema = Schema.INT64_SCHEMA;
+
+        long rootId = 1L;
+        Struct rootStruct = createNestedSetTimestampIncrementedStruct(rootId, 1, 2, "Root", 1474661401000L);
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                keySchema, rootId,
+                NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, rootStruct, 0)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 1);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
+
+        Schema newValueSchema = SchemaBuilder.struct()
+                .field(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, Schema.INT64_SCHEMA)
+                .field(TABLE_LEFT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+                .field(TABLE_RIGHT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+                .field(TABLE_LABEL_COLUMN_NAME, Schema.STRING_SCHEMA)
+                .field(TABLE_MODIFIED_COLUMN_NAME, Timestamp.SCHEMA)
+                .field("active", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+                .build();
+
+        Struct updatedRootStruct = new Struct(newValueSchema)
+                .put(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, 1L)
+                .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, 1)
+                .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, 2)
+                .put(TABLE_LABEL_COLUMN_NAME, "Root")
+                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661402000L))
+                .put("active", true);
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0, keySchema, rootId, newValueSchema, updatedRootStruct, 2)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 2);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
+
+        assertThat(
+                jdbcHelper.select("select active from " + NESTED_SET_TABLE_NAME + " where " + TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT + " = " + rootId,
+                        rs -> {
+                            assertThat(rs.getBoolean(1), equalTo(true));
+                        }),
+                equalTo(1));
+    }
+
     private Struct createNestedSetIncrementedStruct(long id, int left, int right, String label) {
         return new Struct(NESTED_SET_INCREMENTED_SCHEMA)
                 .put(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, id)

@@ -67,8 +67,9 @@ public class DbStructure {
       createTable(config, connection, tableId, fieldsMetadata.allFields.values());
     }
 
-    return amendIfNecessary(config, connection, tableId, fieldsMetadata, dbDialect::buildAlterTable, config.maxRetries)
-            || amendIfNecessary(config, connection, logTableId, fieldsMetadata, dbDialect::buildAlterLogTable, config.maxRetries);
+    boolean tableAmended = amendIfNecessary(config, connection, tableId, fieldsMetadata, dbDialect::buildAlterTable, config.maxRetries);
+    boolean logTableAmended = amendIfNecessary(config, connection, logTableId, fieldsMetadata, dbDialect::buildAlterLogTable, config.maxRetries);
+    return tableAmended || logTableAmended;
   }
 
   public void createLogOffsetTableIfNecessary(
@@ -246,7 +247,7 @@ public class DbStructure {
     final List<String> amendTableQueries = alterTableStatementGenerator.apply(tableId, missingFields);
     log.info(
         "Amending {} to add missing fields:{} maxRetries:{} with SQL: {}",
-        type,
+        tableId,
         missingFields,
         maxRetries,
         amendTableQueries
