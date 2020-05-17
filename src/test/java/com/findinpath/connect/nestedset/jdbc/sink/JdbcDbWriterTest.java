@@ -188,6 +188,45 @@ public abstract class JdbcDbWriterTest {
 
 
     @Test
+    public void deduplicationDuringTheSynchronisationOfNestedSetLogEntriesAccuracy() throws SQLException {
+        JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true);
+
+        Schema keySchema = Schema.INT64_SCHEMA;
+
+        long rootId = 111L;
+        long child1Id = 222L;
+        long child2Id = 333L;
+        Struct rootT0Struct = createNestedSetTimestampIncrementedStruct(rootId, 1, 2, "Root", 1474661401000L);
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                keySchema, rootId,
+                NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, rootT0Struct, 0)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 1);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
+
+        Struct child1T1Struct = createNestedSetTimestampIncrementedStruct(child1Id, 2, 3, "Child 1", 1474661402000L);
+        Struct rootT1Struct = createNestedSetTimestampIncrementedStruct(rootId, 1, 4, "Root", 1474661402000L);
+
+        Struct child2T2Struct = createNestedSetTimestampIncrementedStruct(child2Id, 4, 5, "Child 2", 1474661403000L);
+        Struct rootT2Struct = createNestedSetTimestampIncrementedStruct(rootId, 1, 6, "Root", 1474661403000L);
+
+
+        jdbcDbWriter.write(asList(
+                new SinkRecord(TOPIC, 0, keySchema, child1Id, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, child1T1Struct, 1),
+                new SinkRecord(TOPIC, 0, keySchema, rootId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, rootT1Struct, 2),
+                new SinkRecord(TOPIC, 0, keySchema, rootId, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, rootT2Struct, 3),
+                new SinkRecord(TOPIC, 0, keySchema, child2Id, NESTED_SET_TIMESTAMP_INCREMENTED_SCHEMA, child2T2Struct, 4)
+                )
+        );
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 5);
+        assertTableSize(NESTED_SET_TABLE_NAME, 3);
+        assertOffsetAccuracyForSynchronizedRecords();
+    }
+
+    @Test
     public void autoEvolutionAccuracy() throws SQLException {
         JdbcDbWriter jdbcDbWriter = createJdbcDbWriter(true, true);
 
