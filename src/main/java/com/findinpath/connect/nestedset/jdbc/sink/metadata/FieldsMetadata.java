@@ -87,12 +87,6 @@ public class FieldsMetadata {
 
     final Set<String> keyFieldNames = new LinkedHashSet<>();
     switch (pkMode) {
-      case NONE:
-        break;
-
-      case KAFKA:
-        extractKafkaPk(tableName, configuredPkFields, allFields, keyFieldNames);
-        break;
 
       case RECORD_KEY:
         extractRecordKeyPk(tableName, configuredPkFields, keySchema, allFields, keyFieldNames);
@@ -130,11 +124,6 @@ public class FieldsMetadata {
     }
 
     final Map<String, SinkRecordField> allFieldsOrdered = new LinkedHashMap<>();
-    for (String fieldName : JdbcSinkConfig.DEFAULT_KAFKA_PK_NAMES) {
-      if (allFields.containsKey(fieldName)) {
-        allFieldsOrdered.put(fieldName, allFields.get(fieldName));
-      }
-    }
 
     if (valueSchema != null) {
       for (Field field : valueSchema.fields()) {
@@ -156,44 +145,6 @@ public class FieldsMetadata {
     }
 
     return new FieldsMetadata(keyFieldNames, nonKeyFieldNames, allFieldsOrdered);
-  }
-
-  private static void extractKafkaPk(
-      final String tableName,
-      final List<String> configuredPkFields,
-      final Map<String, SinkRecordField> allFields,
-      final Set<String> keyFieldNames
-  ) {
-    if (configuredPkFields.isEmpty()) {
-      keyFieldNames.addAll(JdbcSinkConfig.DEFAULT_KAFKA_PK_NAMES);
-    } else if (configuredPkFields.size() == 3) {
-      keyFieldNames.addAll(configuredPkFields);
-    } else {
-      throw new ConnectException(String.format(
-          "PK mode for table '%s' is %s so there should either be no field names defined for "
-          + "defaults %s to be applicable, or exactly 3, defined fields are: %s",
-          tableName,
-          JdbcSinkConfig.PrimaryKeyMode.KAFKA,
-          JdbcSinkConfig.DEFAULT_KAFKA_PK_NAMES,
-          configuredPkFields
-      ));
-    }
-    final Iterator<String> it = keyFieldNames.iterator();
-    final String topicFieldName = it.next();
-    allFields.put(
-        topicFieldName,
-        new SinkRecordField(Schema.STRING_SCHEMA, topicFieldName, true)
-    );
-    final String partitionFieldName = it.next();
-    allFields.put(
-        partitionFieldName,
-        new SinkRecordField(Schema.INT32_SCHEMA, partitionFieldName, true)
-    );
-    final String offsetFieldName = it.next();
-    allFields.put(
-        offsetFieldName,
-        new SinkRecordField(Schema.INT64_SCHEMA, offsetFieldName, true)
-    );
   }
 
   private static void extractRecordKeyPk(

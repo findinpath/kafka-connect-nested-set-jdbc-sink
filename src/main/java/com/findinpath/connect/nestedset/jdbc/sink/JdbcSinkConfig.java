@@ -46,19 +46,9 @@ import java.util.stream.Collectors;
 public class JdbcSinkConfig extends AbstractConfig {
 
   public enum PrimaryKeyMode {
-    NONE,
-    KAFKA,
     RECORD_KEY,
     RECORD_VALUE;
   }
-
-  public static final List<String> DEFAULT_KAFKA_PK_NAMES = Collections.unmodifiableList(
-      Arrays.asList(
-          "__connect_topic",
-          "__connect_partition",
-          "__connect_offset"
-      )
-  );
 
   public static final String CONNECTION_URL = "connection.url";
   private static final String CONNECTION_URL_DOC =
@@ -195,32 +185,21 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String AUTO_EVOLVE_DISPLAY = "Auto-Evolve";
 
   public static final String PK_FIELDS = "pk.fields";
-  private static final String PK_FIELDS_DEFAULT = "";
+  private static final String PK_FIELDS_DEFAULT = "id";
   private static final String PK_FIELDS_DOC =
       "List of comma-separated primary key field names. The runtime interpretation of this config"
       + " depends on the ``pk.mode``:\n"
-      + "``none``\n"
-      + "    Ignored as no fields are used as primary key in this mode.\n"
-      + "``kafka``\n"
-      + "    Must be a trio representing the Kafka coordinates, defaults to ``"
-      + StringUtils.join(DEFAULT_KAFKA_PK_NAMES, ",") + "`` if empty.\n"
       + "``record_key``\n"
-      + "    If empty, all fields from the key struct will be used, otherwise used to extract the"
-      + " desired fields - for primitive key only a single field name must be configured.\n"
+      + "    used to extract the desired fields - for primitive key only a single field name must be configured.\n"
       + "``record_value``\n"
-      + "    If empty, all fields from the value struct will be used, otherwise used to extract "
-      + "the desired fields.";
+      + "    used to extract the desired fields.";
   private static final String PK_FIELDS_DISPLAY = "Primary Key Fields";
 
   public static final String PK_MODE = "pk.mode";
-  private static final String PK_MODE_DEFAULT = "none";
+  private static final String PK_MODE_DEFAULT = "record_value";
   private static final String PK_MODE_DOC =
       "The primary key mode, also refer to ``" + PK_FIELDS + "`` documentation for interplay. "
       + "Supported modes are:\n"
-      + "``none``\n"
-      + "    No keys utilized.\n"
-      + "``kafka``\n"
-      + "    Kafka coordinates are used as the PK.\n"
       + "``record_key``\n"
       + "    Field(s) from the record key are used, which may be a primitive or a struct.\n"
       + "``record_value``\n"

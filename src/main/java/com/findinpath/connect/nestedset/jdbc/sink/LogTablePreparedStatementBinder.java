@@ -73,20 +73,6 @@ public class LogTablePreparedStatementBinder implements LogTableStatementBinder 
 
   protected int bindKeyFields(SinkRecord record, int index) throws SQLException {
     switch (pkMode) {
-      case NONE:
-        if (!fieldsMetadata.keyFieldNames.isEmpty()) {
-          throw new AssertionError();
-        }
-        break;
-
-      case KAFKA: {
-        assert fieldsMetadata.keyFieldNames.size() == 3;
-        bindField(index++, Schema.STRING_SCHEMA, record.topic());
-        bindField(index++, Schema.INT32_SCHEMA, record.kafkaPartition());
-        bindField(index++, Schema.INT64_SCHEMA, record.kafkaOffset());
-      }
-      break;
-
       case RECORD_KEY: {
         if (schemaPair.keySchema.type().isPrimitive()) {
           assert fieldsMetadata.keyFieldNames.size() == 1;
