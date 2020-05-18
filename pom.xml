@@ -34,9 +34,10 @@
     <hamcrest.version>2.2</hamcrest.version>
     <awaitility.version>4.0.2</awaitility.version>
 
-    <testcontainers.version>1.14.1</testcontainers.version>
+    <testcontainers.version>1.14.2</testcontainers.version>
     <postgresql.version>42.2.11</postgresql.version>
     <mysql.version>8.0.20</mysql.version>
+    <mssql.version>8.2.2.jre8</mssql.version>
 
   </properties>
 
@@ -107,12 +108,24 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>mssqlserver</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+
 
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>${testcontainers.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>mssql-jdbc</artifactId>
+      <version>${mssql.version}</version>
     </dependency>
 
 
