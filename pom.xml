@@ -41,6 +41,9 @@
         <mssql-jdbc.version>8.2.2.jre8</mssql-jdbc.version>
         <oracle-jdbc.version>18.3.0.0</oracle-jdbc.version>
         <sqlite-jdbc.version>3.25.2</sqlite-jdbc.version>
+
+        <rest-assured.version>4.3.0</rest-assured.version>
+        <jackson.version>2.11.0</jackson.version>
     </properties>
 
 
@@ -91,6 +94,7 @@
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
             <version>${awaitility.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -150,6 +154,22 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+
+
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>${rest-assured.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
             <scope>test</scope>
         </dependency>
 
