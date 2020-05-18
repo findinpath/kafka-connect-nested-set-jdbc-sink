@@ -126,6 +126,7 @@
       <groupId>com.microsoft.sqlserver</groupId>
       <artifactId>mssql-jdbc</artifactId>
       <version>${mssql.version}</version>
+      <scope>test</scope>
     </dependency>
 
 
