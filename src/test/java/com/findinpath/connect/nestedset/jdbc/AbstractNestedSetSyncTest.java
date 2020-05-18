@@ -20,6 +20,7 @@ package com.findinpath.connect.nestedset.jdbc;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.findinpath.connect.nestedset.jdbc.util.Version;
 import com.findinpath.testcontainers.KafkaConnectContainer;
 import com.findinpath.testcontainers.KafkaContainer;
 import com.findinpath.testcontainers.SchemaRegistryContainer;
@@ -32,6 +33,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.lifecycle.Startables;
 
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -42,6 +44,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static com.findinpath.testcontainers.KafkaConnectContainer.PLUGIN_PATH_CONTAINER;
 import static io.restassured.RestAssured.given;
 import static java.lang.String.format;
 
@@ -72,13 +75,18 @@ public abstract class AbstractNestedSetSyncTest {
     private static final String KAFKA_CONNECT_CONNECTOR_NAME = "findinpath";
     private static final String NESTED_SET_NODE_SOURCE_TABLE_NAME = "nested_set_node";
 
+
+    private static final String NESTED_SET_NODE_SINK_TABLE_NAME = "nested_set_node";
+    private static final String NESTED_SET_NODE_SINK_LOG_TABLE_NAME = "nested_set_node_log";
+    private static final String NESTED_SET_NODE_SINK_LOG_OFFSET_TABLE_NAME = "nested_set_node_log_offset";
+
     private static final String POSTGRES_DB_DRIVER_CLASS_NAME = "org.postgresql.Driver";
 
     protected static final String POSTGRES_SOURCE_DB_NAME = "source";
     protected static final String POSTGRES_SOURCE_NETWORK_ALIAS = "source";
     protected static final String POSTGRES_SOURCE_DB_USERNAME = "sa";
     protected static final String POSTGRES_SOURCE_DB_PASSWORD = "p@ssw0rd!source";
-    protected static final int POSTGRES_SOURCE_INTERNAL_PORT = 5432;
+    protected static final int POSTGRES_INTERNAL_PORT = 5432;
 
     private static final String TRUNCATE_SOURCE_NESTED_SET_NODE_SQL =
             "TRUNCATE nested_set_node";
@@ -95,15 +103,20 @@ public abstract class AbstractNestedSetSyncTest {
             "TRUNCATE nested_set_node_log";
 
     private static final String TRUNCATE_SINK_LOG_OFFSET_SQL =
-            "TRUNCATE log_offset";
+            "TRUNCATE nested_set_node_log_offset";
 
     /**
      * Postgres JDBC connection URL to be used within the docker environment.
      */
     private static final String POSTGRES_SOURCE_INTERNAL_CONNECTION_URL = format("jdbc:postgresql://%s:%d/%s?loggerLevel=OFF",
             POSTGRES_SOURCE_NETWORK_ALIAS,
-            POSTGRES_SOURCE_INTERNAL_PORT,
+            POSTGRES_INTERNAL_PORT,
             POSTGRES_SOURCE_DB_NAME);
+
+    private static final String POSTGRES_SINK_INTERNAL_CONNECTION_URL = format("jdbc:postgresql://%s:%d/%s?loggerLevel=OFF",
+            POSTGRES_SINK_NETWORK_ALIAS,
+            POSTGRES_INTERNAL_PORT,
+            POSTGRES_SINK_DB_NAME);
 
     private static Network network;
 
@@ -144,7 +157,7 @@ public abstract class AbstractNestedSetSyncTest {
                 .withNetwork(network);
         kafkaConnectContainer = new KafkaConnectContainer(kafkaContainer.getInternalBootstrapServersUrl())
                 .withNetwork(network)
-                .withPlugins("plugins/kafka-connect-jdbc/postgresql-42.2.12.jar")
+                .withPlugin(Paths.get("target/kafka-connect-nested-set-jdbc-sink-"+ Version.getVersion() +".jar"), PLUGIN_PATH_CONTAINER+"/kafka-connect-jdbc")
                 .withKeyConverter("org.apache.kafka.connect.storage.StringConverter")
                 .withValueConverter("io.confluent.connect.avro.AvroConverter")
                 .withSchemaRegistryUrl(schemaRegistryContainer.getInternalUrl());
@@ -187,11 +200,13 @@ public abstract class AbstractNestedSetSyncTest {
         testUuid = UUID.randomUUID().toString();
 
         setupKakfaConnectJdbcNestedSetNodeSourceTableConnector(testUuid);
+        setupKakfaConnectJdbcNestedSetNodeSinkConnector(testUuid);
     }
 
 
     protected void tearDown() {
-        deleteKakfaConnectJdbcNestedSetNodeSourceTableConnector(testUuid);
+        deleteKakfaConnectJdbcNestedSetNodeSourceConnector(testUuid);
+        deleteKakfaConnectJdbcNestedSetNodeSinkConnector(testUuid);
     }
 
     protected String getKafkaConnectOutputTopic() {
@@ -199,33 +214,75 @@ public abstract class AbstractNestedSetSyncTest {
     }
 
     private static void setupKakfaConnectJdbcNestedSetNodeSourceTableConnector(String testUuid) {
-        ConnectorConfiguration nestedSetNodeSourceConnectorConfig = createConnectorConfig(
-                getKafkaConnectorName(testUuid),
-                NESTED_SET_NODE_SOURCE_TABLE_NAME,
-                POSTGRES_SOURCE_INTERNAL_CONNECTION_URL,
-                POSTGRES_SOURCE_DB_USERNAME,
-                POSTGRES_SOURCE_DB_PASSWORD,
-                getKafkaConnectOutputTopicPrefix(testUuid));
-        registerNestedSetNodeSourceTableConnector(nestedSetNodeSourceConnectorConfig);
+        Map<String, String> config = new HashMap<>();
+        String connectorName = getKafkaConnectorSourceName(testUuid);
+        config.put("name", connectorName);
+        config.put("connector.class", "io.confluent.connect.jdbc.JdbcSourceConnector");
+        config.put("tasks.max", "1");
+        config.put("connection.url", POSTGRES_SOURCE_INTERNAL_CONNECTION_URL);
+        config.put("connection.user", POSTGRES_SOURCE_DB_USERNAME);
+        config.put("connection.password", POSTGRES_SOURCE_DB_PASSWORD);
+        config.put("table.whitelist", NESTED_SET_NODE_SOURCE_TABLE_NAME);
+        config.put("mode", "timestamp+incrementing");
+        config.put("timestamp.column.name", "updated");
+        config.put("validate.non.null", "false");
+        config.put("incrementing.column.name", "id");
+        config.put("topic.prefix", getKafkaConnectOutputTopicPrefix(testUuid));
+
+        ConnectorConfiguration nestedSetNodeSourceConnectorConfig = new ConnectorConfiguration(connectorName, config);
+        registerConnector(nestedSetNodeSourceConnectorConfig);
     }
 
+    private static void setupKakfaConnectJdbcNestedSetNodeSinkConnector(String testUuid) {
+        Map<String, String> config = new HashMap<>();
+        String connectorName = getKafkaConnectorSinkName(testUuid);
+        config.put("name", connectorName);
+        config.put("connector.class", "com.findinpath.connect.nestedset.jdbc.NestedSetJdbcSinkConnector");
+        config.put("tasks.max", "1");
+        config.put("topics", getKafkaConnectOutputTopicPrefix(testUuid) + NESTED_SET_NODE_SOURCE_TABLE_NAME);
+        config.put("connection.url", POSTGRES_SINK_INTERNAL_CONNECTION_URL);
+        config.put("connection.user", POSTGRES_SINK_DB_USERNAME);
+        config.put("connection.password", POSTGRES_SINK_DB_PASSWORD);
+        config.put("table.name", NESTED_SET_NODE_SINK_TABLE_NAME);
+        config.put("log.table.name", NESTED_SET_NODE_SINK_LOG_TABLE_NAME);
+        config.put("log.offset.table.name", NESTED_SET_NODE_SINK_LOG_OFFSET_TABLE_NAME);
 
-    private static void deleteKakfaConnectJdbcNestedSetNodeSourceTableConnector(String testUuid) {
+        ConnectorConfiguration nestedSetNodeSourceConnectorConfig = new ConnectorConfiguration(connectorName, config);
+        registerConnector(nestedSetNodeSourceConnectorConfig);
+    }
+
+    private static void deleteKakfaConnectJdbcNestedSetNodeSourceConnector(String testUuid) {
         given()
                 .log().uri()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
                 .when()
-                .delete(kafkaConnectContainer.getUrl() + "/connectors/" + getKafkaConnectorName(testUuid))
+                .delete(kafkaConnectContainer.getUrl() + "/connectors/" + getKafkaConnectorSourceName(testUuid))
                 .andReturn()
                 .then()
                 .log().all()
                 .statusCode(HttpStatus.SC_NO_CONTENT);
     }
 
+    private static void deleteKakfaConnectJdbcNestedSetNodeSinkConnector(String testUuid) {
+        given()
+                .log().uri()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .when()
+                .delete(kafkaConnectContainer.getUrl() + "/connectors/" + getKafkaConnectorSinkName(testUuid))
+                .andReturn()
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.SC_NO_CONTENT);
+    }
 
-    private static String getKafkaConnectorName(String suffix) {
-        return KAFKA_CONNECT_CONNECTOR_NAME + "-" + suffix;
+    private static String getKafkaConnectorSourceName(String suffix) {
+        return KAFKA_CONNECT_CONNECTOR_NAME + "-source-"  + suffix;
+    }
+
+    private static String getKafkaConnectorSinkName(String suffix) {
+        return KAFKA_CONNECT_CONNECTOR_NAME + "-sink-"  + suffix;
     }
 
     private static String getKafkaConnectOutputTopicPrefix(String extraPrefix) {
@@ -240,31 +297,7 @@ public abstract class AbstractNestedSetSyncTest {
         }
     }
 
-    private static ConnectorConfiguration createConnectorConfig(String connectorName,
-                                                                String tableName,
-                                                                String connectionUrl,
-                                                                String connectionUser,
-                                                                String connectionPassword,
-                                                                String topicPrefix) {
-
-        Map<String, String> config = new HashMap<>();
-        config.put("name", connectorName);
-        config.put("connector.class", "io.confluent.connect.jdbc.JdbcSourceConnector");
-        config.put("tasks.max", "1");
-        config.put("connection.url", connectionUrl);
-        config.put("connection.user", connectionUser);
-        config.put("connection.password", connectionPassword);
-        config.put("table.whitelist", tableName);
-        config.put("mode", "timestamp+incrementing");
-        config.put("timestamp.column.name", "updated");
-        config.put("validate.non.null", "false");
-        config.put("incrementing.column.name", "id");
-        config.put("topic.prefix", topicPrefix);
-
-        return new ConnectorConfiguration(connectorName, config);
-    }
-
-    private static void registerNestedSetNodeSourceTableConnector(ConnectorConfiguration connectorConfiguration) {
+    private static void registerConnector(ConnectorConfiguration connectorConfiguration) {
         given()
                 .log().all()
                 .contentType(ContentType.JSON)

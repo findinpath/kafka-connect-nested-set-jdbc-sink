@@ -58,7 +58,7 @@ public class KafkaConnectContainer extends GenericContainer<KafkaConnectContaine
     public static final String VALUE_CONVERTER_CONFIG = "CONNECT_VALUE_CONVERTER";
     public static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL_CONFIG = "CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL";
     private static final String AVRO_CONVERTER_PATTERN = "AvroConverter";
-    private static final String PLUGIN_PATH_CONTAINER = "/usr/share/java";
+    public static final String PLUGIN_PATH_CONTAINER = "/usr/share/java";
     private static final String GROUP_ID_DEFAULT_VALUE = "kafka-connect-group";
     private static final String OFFSET_STORAGE_FILE_FILENAME_DEFAULT_VALUE = "connect-offsets-file.txt";
     private static final String OFFSET_STORAGE_TOPIC_DEFAULT_VALUE = "connect-offsets";
@@ -292,21 +292,50 @@ public class KafkaConnectContainer extends GenericContainer<KafkaConnectContaine
         if (plugins == null) {
             return this;
         }
-        plugins.forEach(this::withPlugins);
+        plugins.forEach(this::withPlugin);
         return this;
     }
 
     /**
      * Set the plugins directory.
      *
-     * @param plugins
+     * @param plugin
      * @return
      */
-    public KafkaConnectContainer withPlugins(String plugins) {
-        if (plugins == null) {
+    public KafkaConnectContainer withPlugin(String plugin) {
+        if (plugin == null) {
             return this;
         }
-        MountableFile mountableFile = MountableFile.forClasspathResource(plugins);
+        MountableFile mountableFile = MountableFile.forClasspathResource(plugin);
+        return withPlugin(mountableFile);
+    }
+
+    public KafkaConnectContainer withPlugin(Path pluginFilePath, String containerDirectoryPath) {
+        if (pluginFilePath == null) {
+            return this;
+        }
+        MountableFile mountableFile = MountableFile.forHostPath(pluginFilePath);
+        Path pluginsPath = Paths.get(mountableFile.getResolvedPath());
+        File pluginsFile = pluginsPath.toFile();
+        if (!pluginsFile.exists()) {
+            throw new IllegalArgumentException(format("Resource with path %s could not be found", pluginsPath.toString()));
+        }
+
+        if (pluginsFile.isDirectory()){
+            throw new IllegalArgumentException(format("Resource with path %s is a directory", pluginsPath.toString()));
+        }
+
+        String containerPath = containerDirectoryPath + "/" + pluginsPath.getFileName();
+        // Create the volume that will be need for scripts
+        this.addFileSystemBind(mountableFile.getResolvedPath(), containerPath, BindMode.READ_ONLY);
+        return this;
+    }
+
+    public KafkaConnectContainer withPlugin(MountableFile mountableFile) {
+        if (mountableFile == null) {
+            return this;
+        }
+
         Path pluginsPath = Paths.get(mountableFile.getResolvedPath());
         File pluginsFile = pluginsPath.toFile();
         if (!pluginsFile.exists()) {

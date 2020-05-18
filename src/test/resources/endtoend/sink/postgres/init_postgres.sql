@@ -25,7 +25,7 @@ CREATE TABLE nested_set_node_log(
 CREATE TABLE nested_set_node_log_offset(
     log_table_name varchar(256),
     log_table_offset bigint,
-    primary key (name)
+    primary key (log_table_name)
 );
 
-INSERT INTO log_offset (name, value) VALUES ('nested_set_node_log', 0);
+INSERT INTO nested_set_node_log_offset (log_table_name, log_table_offset) VALUES ('nested_set_node_log', 0);

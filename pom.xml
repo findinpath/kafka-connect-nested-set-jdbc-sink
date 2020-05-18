@@ -268,8 +268,8 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>create-test-assembly</id>
-                        <phase>generate-test-resources</phase>
+                        <id>package-classes-before-test</id>
+                        <phase>process-classes</phase>
                         <goals>
                             <goal>jar</goal>
                         </goals>
