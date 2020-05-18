@@ -301,23 +301,22 @@ public abstract class JdbcDbWriterTest {
 
         Schema valueSchema = SchemaBuilder.struct()
                 .field(nodeIdFieldName, Schema.INT64_SCHEMA)
-                .field(treeFieldName, Schema.STRING_SCHEMA)
+                .field(treeFieldName, Schema.INT64_SCHEMA)
                 .field(TABLE_LEFT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
                 .field(TABLE_RIGHT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
                 .field(TABLE_LABEL_COLUMN_NAME, Schema.STRING_SCHEMA)
                 .field(TABLE_MODIFIED_COLUMN_NAME, Timestamp.SCHEMA)
-                .field("active", Schema.OPTIONAL_BOOLEAN_SCHEMA)
                 .build();
 
-        long rootId = 1L;
+        long nodeId = 1L;
+        long treeId = 1000L;
         Struct rootStruct = new Struct(valueSchema)
-                .put(nodeIdFieldName, rootId)
-                .put(treeFieldName, "CategoryTree")
+                .put(nodeIdFieldName, nodeId)
+                .put(treeFieldName, treeId)
                 .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, 1)
                 .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, 2)
                 .put(TABLE_LABEL_COLUMN_NAME, "Root")
-                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661401000L))
-                .put("active", true);
+                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661401000L));
 
         jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
                 null, null,
@@ -325,13 +324,12 @@ public abstract class JdbcDbWriterTest {
 
 
         Struct updatedRootStruct = new Struct(valueSchema)
-                .put(nodeIdFieldName, rootId)
-                .put(treeFieldName, "CategoryTree")
+                .put(nodeIdFieldName, nodeId)
+                .put(treeFieldName, treeId)
                 .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, 1)
                 .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, 2)
                 .put(TABLE_LABEL_COLUMN_NAME, "Updated Root Label")
-                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661402000L))
-                .put("active", true);
+                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661402000L));
 
         jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
                 null, null,
@@ -342,7 +340,8 @@ public abstract class JdbcDbWriterTest {
         assertOffsetAccuracyForSynchronizedRecords();
 
         assertThat(
-                jdbcHelper.select("select label from " + NESTED_SET_TABLE_NAME + " where " + nodeIdFieldName + " = " + rootId,
+                jdbcHelper.select("select label from " + NESTED_SET_TABLE_NAME + " where " + nodeIdFieldName + " = " +
+                                nodeId + " and "+ treeFieldName + " = "+ treeId,
                         rs -> {
                             assertThat(rs.getString(1), equalTo("Updated Root Label"));
                         }),
