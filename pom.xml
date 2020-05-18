@@ -1,255 +1,271 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.findinpath</groupId>
-  <artifactId>kafka-connect-nested-set-jdbc-sink</artifactId>
-  <name>kafka-connect-nested-set-jdbc-sink</name>
-  <organization>
-    <name>findinpath</name>
-    <url>https://findinpath.com</url>
-  </organization>
-  <version>1.0-SNAPSHOT</version>
+    <groupId>com.findinpath</groupId>
+    <artifactId>kafka-connect-nested-set-jdbc-sink</artifactId>
+    <name>kafka-connect-nested-set-jdbc-sink</name>
+    <organization>
+        <name>findinpath</name>
+        <url>https://findinpath.com</url>
+    </organization>
+    <version>1.0-SNAPSHOT</version>
 
-  <scm>
-    <connection>scm:git:git://github.com/findinpath/kafka-connect-nested-set-jdbc-sink.git
-    </connection>
-    <developerConnection>scm:git:git@github.com:findinpath/kafka-connect-nested-set-jdbc-sink.git
-    </developerConnection>
-    <url>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink</url>
-    <tag>HEAD</tag>
-  </scm>
+    <scm>
+        <connection>scm:git:git://github.com/findinpath/kafka-connect-nested-set-jdbc-sink.git
+        </connection>
+        <developerConnection>scm:git:git@github.com:findinpath/kafka-connect-nested-set-jdbc-sink.git
+        </developerConnection>
+        <url>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink</url>
+        <tag>HEAD</tag>
+    </scm>
 
-  <properties>
-    <java.version>8</java.version>
-    <confluent.maven.repo>https://packages.confluent.io/maven/</confluent.maven.repo>
-    <kafka.version>5.5.0-ccs</kafka.version>
-    <slf4j-api.version>${slf4j.version}</slf4j-api.version>
-    <slf4j.version>1.7.30</slf4j.version>
-    <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
+    <properties>
+        <java.version>8</java.version>
+        <confluent.maven.repo>https://packages.confluent.io/maven/</confluent.maven.repo>
+        <kafka.version>5.5.0-ccs</kafka.version>
+        <slf4j-api.version>${slf4j.version}</slf4j-api.version>
+        <slf4j.version>1.7.30</slf4j.version>
+        <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
 
-    <junit.version>5.6.1</junit.version>
-    <hamcrest.version>2.2</hamcrest.version>
-    <awaitility.version>4.0.2</awaitility.version>
+        <junit.version>5.6.1</junit.version>
+        <hamcrest.version>2.2</hamcrest.version>
+        <awaitility.version>4.0.2</awaitility.version>
 
-    <testcontainers.version>1.14.2</testcontainers.version>
-    <postgresql.version>42.2.11</postgresql.version>
-    <mysql.version>8.0.20</mysql.version>
-    <mssql.version>8.2.2.jre8</mssql.version>
+        <testcontainers.version>1.14.2</testcontainers.version>
 
-  </properties>
-
-
-  <repositories>
-    <repository>
-      <id>confluent</id>
-      <name>Confluent</name>
-      <url>${confluent.maven.repo}</url>
-    </repository>
-  </repositories>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>connect-api</artifactId>
-      <version>${kafka.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
-
-    <!-- Test dependencies -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <version>${hamcrest.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
-      <version>${awaitility.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>${postgresql.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>mysql</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <version>${mysql.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>mssqlserver</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
+        <postgresql.version>42.2.11</postgresql.version>
+        <mysql.version>8.0.20</mysql.version>
+        <mssql.version>8.2.2.jre8</mssql.version>
+        <oracle.version>18.3.0.0</oracle.version>
+    </properties>
 
 
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.microsoft.sqlserver</groupId>
-      <artifactId>mssql-jdbc</artifactId>
-      <version>${mssql.version}</version>
-      <scope>test</scope>
-    </dependency>
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <layout>default</layout>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>confluent</id>
+            <name>Confluent</name>
+            <url>${confluent.maven.repo}</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-api</artifactId>
+            <version>${kafka.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-library</artifactId>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mssqlserver</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>${mssql.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>${oracle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
 
 
-  </dependencies>
+    </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
-        <inherited>true</inherited>
-        <configuration>
-          <compilerArgs>
-            <arg>-Xlint:all</arg>
-          </compilerArgs>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M4</version>
-      </plugin>
-      <plugin>
-        <groupId>io.confluent</groupId>
-        <version>${kafka.connect.maven.plugin.version}</version>
-        <artifactId>kafka-connect-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>kafka-connect</goal>
-            </goals>
-            <configuration>
-              <title>Kafka Connect Nested Set JDBC Sink</title>
-              <documentationUrl>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink
-              </documentationUrl>
-              <description>
-                The JDBC nested set sink connector allow you to sink from Apache Kafka nested set
-                model data consistently to a relational database.
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <inherited>true</inherited>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-Xlint:all</arg>
+                    </compilerArgs>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M4</version>
+            </plugin>
+            <plugin>
+                <groupId>io.confluent</groupId>
+                <version>${kafka.connect.maven.plugin.version}</version>
+                <artifactId>kafka-connect-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>kafka-connect</goal>
+                        </goals>
+                        <configuration>
+                            <title>Kafka Connect Nested Set JDBC Sink</title>
+                            <documentationUrl>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink
+                            </documentationUrl>
+                            <description>
+                                The JDBC nested set sink connector allow you to sink from Apache Kafka nested set
+                                model data consistently to a relational database.
 
-                The JDBC sink connector allows you to export nested set data from Kafka topics to
-                any relational database with a JDBC driver. By using JDBC,
-                this connector can support a wide variety of databases without requiring a dedicated
-                connector for each one.
-                The connector polls nested set data from Kafka to write to the database table based
-                on the topics subscription.
+                                The JDBC sink connector allows you to export nested set data from Kafka topics to
+                                any relational database with a JDBC driver. By using JDBC,
+                                this connector can support a wide variety of databases without requiring a dedicated
+                                connector for each one.
+                                The connector polls nested set data from Kafka to write to the database table based
+                                on the topics subscription.
 
-                Auto-creation of tables, and limited auto-evolution is also supported.
-              </description>
-              <logo>logos/jdbc.jpg</logo>
+                                Auto-creation of tables, and limited auto-evolution is also supported.
+                            </description>
+                            <logo>logos/jdbc.jpg</logo>
 
-              <supportProviderName>findinpath</supportProviderName>
-              <supportUrl>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/issues</supportUrl>
-              <supportLogo>logos/findinpath.png</supportLogo>
+                            <supportProviderName>findinpath</supportProviderName>
+                            <supportUrl>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/issues
+                            </supportUrl>
+                            <supportLogo>logos/findinpath.png</supportLogo>
 
-              <ownerUsername>findinpath</ownerUsername>
-              <ownerType>organization</ownerType>
-              <ownerName>findinpath</ownerName>
-              <ownerUrl>https://findinpath.com/</ownerUrl>
+                            <ownerUsername>findinpath</ownerUsername>
+                            <ownerType>organization</ownerType>
+                            <ownerName>findinpath</ownerName>
+                            <ownerUrl>https://findinpath.com/</ownerUrl>
 
-              <componentTypes>
-                <componentType>sink</componentType>
-              </componentTypes>
+                            <componentTypes>
+                                <componentType>sink</componentType>
+                            </componentTypes>
 
-              <tags>
-                <tag>jdbc</tag>
-                <tag>nested set</tag>
-                <tag>database</tag>
-                <tag>dbms</tag>
-                <tag>rdbms</tag>
-                <tag>sql</tag>
-                <tag>mysql</tag>
-                <tag>postgresql</tag>
-                <tag>sqlite</tag>
-              </tags>
+                            <tags>
+                                <tag>jdbc</tag>
+                                <tag>nested set</tag>
+                                <tag>database</tag>
+                                <tag>dbms</tag>
+                                <tag>rdbms</tag>
+                                <tag>sql</tag>
+                                <tag>mysql</tag>
+                                <tag>postgresql</tag>
+                                <tag>sqlite</tag>
+                            </tags>
 
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifest>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptors>
-            <descriptor>src/main/assembly/package.xml</descriptor>
-          </descriptors>
-          <archive>
-            <manifest>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-            </manifest>
-          </archive>
-        </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/package.xml</descriptor>
+                    </descriptors>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
 
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
-  </build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
 
 </project>

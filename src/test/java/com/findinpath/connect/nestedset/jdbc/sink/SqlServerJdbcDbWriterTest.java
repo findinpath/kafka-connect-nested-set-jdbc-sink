@@ -8,7 +8,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 public class SqlServerJdbcDbWriterTest extends JdbcDbWriterTest {
     @Container
     protected static MSSQLServerContainer msSqlContainer = new MSSQLServerContainer<>()
-            .withInitScript("sink/postgres/init_jdbcdbdriver_mssql.sql");
+            .withInitScript("sink/init_jdbcdbdriver_mssql.sql");
 
     @Override
     protected String getJdbcUrl() {

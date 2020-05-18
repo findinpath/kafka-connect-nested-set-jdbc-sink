@@ -12,7 +12,7 @@ public class PostgresJdbcDbWriterTest extends JdbcDbWriterTest {
 
     @Container
     protected static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer<>("postgres:12")
-            .withInitScript("sink/postgres/init_jdbcdbdriver_postgres.sql")
+            .withInitScript("sink/init_jdbcdbdriver_postgres.sql")
             .withDatabaseName(POSTGRES_DB_NAME)
             .withUsername(POSTGRES_DB_USERNAME)
             .withPassword(POSTGRES_DB_PASSWORD);

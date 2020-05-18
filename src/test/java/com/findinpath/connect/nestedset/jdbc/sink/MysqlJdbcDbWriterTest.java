@@ -13,7 +13,7 @@ public class MysqlJdbcDbWriterTest extends JdbcDbWriterTest {
 
     @Container
     protected static MySQLContainer postgreSQLContainer = new MySQLContainer<>("mysql:8")
-            .withInitScript("sink/postgres/init_jdbcdbdriver_mysql.sql")
+            .withInitScript("sink/init_jdbcdbdriver_mysql.sql")
             .withDatabaseName(MYSQL_DB_NAME)
             .withUsername(MYSQL_DB_USERNAME)
             .withPassword(MYSQL_DB_PASSWORD);

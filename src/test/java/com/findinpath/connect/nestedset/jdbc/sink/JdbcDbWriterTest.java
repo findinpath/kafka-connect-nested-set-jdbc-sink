@@ -2,6 +2,7 @@ package com.findinpath.connect.nestedset.jdbc.sink;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialect;
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialects;
+import com.findinpath.connect.nestedset.jdbc.util.QuoteMethod;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
@@ -28,6 +29,7 @@ import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PK_FIELD
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PK_MODE;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode.RECORD_VALUE;
+import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.QUOTE_SQL_IDENTIFIERS_CONFIG;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.TABLE_NAME;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -62,7 +64,7 @@ public abstract class JdbcDbWriterTest {
             .field(TABLE_MODIFIED_COLUMN_NAME, Timestamp.SCHEMA)
             .build();
 
-    private JdbcHelper jdbcHelper;
+    protected JdbcHelper jdbcHelper;
 
 
     protected abstract String getJdbcUrl();
@@ -81,6 +83,7 @@ public abstract class JdbcDbWriterTest {
                                               boolean autoEvolve,
                                               boolean deleteEnabled) {
         Map<String, Object> props = new HashMap<>();
+        props.put(QUOTE_SQL_IDENTIFIERS_CONFIG, QuoteMethod.NEVER.name());
         props.put(AUTO_CREATE, String.valueOf(autoCreate));
         props.put(AUTO_EVOLVE, String.valueOf(autoEvolve));
         props.put(DELETE_ENABLED, String.valueOf(deleteEnabled));
@@ -104,10 +107,9 @@ public abstract class JdbcDbWriterTest {
     @BeforeEach
     public void setup() throws SQLException {
         jdbcHelper = new JdbcHelper(getJdbcUrl(), getJdbcUsername(), getJdbcPassword());
-        jdbcHelper.execute("DROP TABLE IF EXISTS " + NESTED_SET_TABLE_NAME);
-        jdbcHelper.execute("DROP TABLE IF EXISTS " + NESTED_SET_LOG_TABLE_NAME);
+        dropTableIfExists(NESTED_SET_TABLE_NAME);
+        dropTableIfExists(NESTED_SET_LOG_TABLE_NAME);
         jdbcHelper.execute("DELETE FROM " + NESTED_SET_LOG_OFFSET_TABLE_NAME);
-
     }
 
     @Test
@@ -386,6 +388,10 @@ public abstract class JdbcDbWriterTest {
                 .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, left)
                 .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, right)
                 .put(TABLE_LABEL_COLUMN_NAME, label);
+    }
+
+    protected void dropTableIfExists(String tableName) throws  SQLException{
+        jdbcHelper.execute("DROP TABLE IF EXISTS " + tableName);
     }
 
     private Struct createNestedSetTimestampIncrementedStruct(long id, int left, int right, String label, long instantMilliseconds) {

@@ -1612,7 +1612,7 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
     builder.append(" WHERE ");
     builder.append(logTableIncrementingColumn);
     builder.append(" > COALESCE ( ")
-            .append("(SELECT ").append(logOffsetTableOffsetColumn).append("FROM ").append(logOffsetTableId)
+            .append("(SELECT ").append(logOffsetTableOffsetColumn).append(" FROM ").append(logOffsetTableId)
             .append(" WHERE ").append(logOffsetTableLogTableColumn).append(" = ?)");
     builder.append(", 0 )");
     builder.append(" ORDER BY ");
