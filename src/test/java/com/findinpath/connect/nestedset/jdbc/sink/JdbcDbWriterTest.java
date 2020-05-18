@@ -27,6 +27,7 @@ import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.LOG_TABL
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PK_FIELDS;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PK_MODE;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY;
+import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode.RECORD_VALUE;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.TABLE_NAME;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -83,9 +84,9 @@ public abstract class JdbcDbWriterTest {
         props.put(AUTO_CREATE, String.valueOf(autoCreate));
         props.put(AUTO_EVOLVE, String.valueOf(autoEvolve));
         props.put(DELETE_ENABLED, String.valueOf(deleteEnabled));
+        props.put(PK_FIELDS, Arrays.asList(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT));
         if (deleteEnabled){
             props.put(PK_MODE, String.valueOf(RECORD_KEY));
-            props.put(PK_FIELDS, Arrays.asList(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT));
         }
         props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
         props.put(LOG_TABLE_NAME, NESTED_SET_LOG_TABLE_NAME);
@@ -270,6 +271,80 @@ public abstract class JdbcDbWriterTest {
                 jdbcHelper.select("select active from " + NESTED_SET_TABLE_NAME + " where " + TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT + " = " + rootId,
                         rs -> {
                             assertThat(rs.getBoolean(1), equalTo(true));
+                        }),
+                equalTo(1));
+    }
+
+    @Test
+    public void composedPrimaryKeyAccuracy() throws SQLException {
+        String nodeIdFieldName = "node_id";
+        String treeFieldName = "tree_id";
+
+        Map<String, Object> props = new HashMap<>();
+        props.put(AUTO_CREATE, String.valueOf(true));
+        props.put(AUTO_EVOLVE, String.valueOf(true));
+        props.put(PK_FIELDS, Arrays.asList(nodeIdFieldName, treeFieldName));
+        props.put(PK_MODE, String.valueOf(RECORD_VALUE));
+        props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
+        props.put(LOG_TABLE_NAME, NESTED_SET_LOG_TABLE_NAME);
+        props.put(CONNECTION_URL, getJdbcUrl());
+        props.put(CONNECTION_USER, getJdbcUsername());
+        props.put(CONNECTION_PASSWORD, getJdbcPassword());
+
+        JdbcSinkConfig config = new JdbcSinkConfig(props);
+        DatabaseDialect dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
+        final DbStructure dbStructure = new DbStructure(dialect);
+
+        JdbcDbWriter jdbcDbWriter= new JdbcDbWriter(config, dialect, dbStructure);
+
+
+
+        Schema valueSchema = SchemaBuilder.struct()
+                .field(nodeIdFieldName, Schema.INT64_SCHEMA)
+                .field(treeFieldName, Schema.STRING_SCHEMA)
+                .field(TABLE_LEFT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+                .field(TABLE_RIGHT_COLUMN_NAME_DEFAULT, Schema.INT32_SCHEMA)
+                .field(TABLE_LABEL_COLUMN_NAME, Schema.STRING_SCHEMA)
+                .field(TABLE_MODIFIED_COLUMN_NAME, Timestamp.SCHEMA)
+                .field("active", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+                .build();
+
+        long rootId = 1L;
+        Struct rootStruct = new Struct(valueSchema)
+                .put(nodeIdFieldName, rootId)
+                .put(treeFieldName, "CategoryTree")
+                .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, 1)
+                .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, 2)
+                .put(TABLE_LABEL_COLUMN_NAME, "Root")
+                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661401000L))
+                .put("active", true);
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                null, null,
+                valueSchema, rootStruct, 0)));
+
+
+        Struct updatedRootStruct = new Struct(valueSchema)
+                .put(nodeIdFieldName, rootId)
+                .put(treeFieldName, "CategoryTree")
+                .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, 1)
+                .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, 2)
+                .put(TABLE_LABEL_COLUMN_NAME, "Updated Root Label")
+                .put(TABLE_MODIFIED_COLUMN_NAME, new Date(1474661402000L))
+                .put("active", true);
+
+        jdbcDbWriter.write(singleton(new SinkRecord(TOPIC, 0,
+                null, null,
+                valueSchema, updatedRootStruct, 1)));
+
+        assertTableSize(NESTED_SET_LOG_TABLE_NAME, 2);
+        assertTableSize(NESTED_SET_TABLE_NAME, 1);
+        assertOffsetAccuracyForSynchronizedRecords();
+
+        assertThat(
+                jdbcHelper.select("select label from " + NESTED_SET_TABLE_NAME + " where " + nodeIdFieldName + " = " + rootId,
+                        rs -> {
+                            assertThat(rs.getString(1), equalTo("Updated Root Label"));
                         }),
                 equalTo(1));
     }

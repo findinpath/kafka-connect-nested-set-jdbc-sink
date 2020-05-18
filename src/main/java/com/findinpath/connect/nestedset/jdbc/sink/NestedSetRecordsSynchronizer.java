@@ -493,8 +493,7 @@ public class NestedSetRecordsSynchronizer {
     }
 
     private static Object getColumnValue(List<Object> recordValues, int index) {
-        Number number = ((Number) recordValues.get(index));
-        return number == null ? null : number.longValue();
+        return recordValues.get(index);
     }
 
     private static Long getColumnValueAsLong(List<Object> recordValues, int index) {

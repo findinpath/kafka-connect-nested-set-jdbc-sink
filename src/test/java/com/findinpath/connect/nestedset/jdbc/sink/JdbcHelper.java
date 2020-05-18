@@ -1,5 +1,8 @@
 package com.findinpath.connect.nestedset.jdbc.sink;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -8,6 +11,9 @@ import java.sql.Statement;
 import java.util.Properties;
 
 public class JdbcHelper {
+    private static final Logger log = LoggerFactory
+            .getLogger(JdbcHelper.class);
+
     public interface ResultSetReadCallback {
         void read(final ResultSet rs) throws SQLException;
     }
@@ -22,6 +28,7 @@ public class JdbcHelper {
     }
 
     public int select(final String query, final JdbcHelper.ResultSetReadCallback callback) throws SQLException {
+        log.info("Executing with callback SQL: {}", query);
         int count = 0;
         try (Statement stmt = connection.createStatement()) {
             try (ResultSet rs = stmt.executeQuery(query)) {
@@ -35,6 +42,7 @@ public class JdbcHelper {
     }
 
     public void execute(String sql) throws SQLException {
+        log.info("Executing SQL: {}", sql);
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql);
         }
