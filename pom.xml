@@ -36,10 +36,11 @@
 
         <testcontainers.version>1.14.2</testcontainers.version>
 
-        <postgresql.version>42.2.11</postgresql.version>
-        <mysql.version>8.0.20</mysql.version>
-        <mssql.version>8.2.2.jre8</mssql.version>
-        <oracle.version>18.3.0.0</oracle.version>
+        <postgresql-jdbc.version>42.2.11</postgresql-jdbc.version>
+        <mysql-jdbc.version>8.0.20</mysql-jdbc.version>
+        <mssql-jdbc.version>8.2.2.jre8</mssql-jdbc.version>
+        <oracle-jdbc.version>18.3.0.0</oracle-jdbc.version>
+        <sqlite-jdbc.version>3.25.2</sqlite-jdbc.version>
     </properties>
 
 
@@ -101,7 +102,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>${postgresql.version}</version>
+            <version>${postgresql-jdbc.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -114,7 +115,7 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql.version}</version>
+            <version>${mysql-jdbc.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -127,14 +128,22 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>${mssql.version}</version>
+            <version>${mssql-jdbc.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc8</artifactId>
-            <version>${oracle.version}</version>
+            <version>${oracle-jdbc.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>${sqlite-jdbc.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -216,9 +225,11 @@
                                 <tag>dbms</tag>
                                 <tag>rdbms</tag>
                                 <tag>sql</tag>
-                                <tag>mysql</tag>
                                 <tag>postgresql</tag>
                                 <tag>sqlite</tag>
+                                <tag>mysql</tag>
+                                <tag>mssql</tag>
+                                <tag>oracle</tag>
                             </tags>
 
                         </configuration>

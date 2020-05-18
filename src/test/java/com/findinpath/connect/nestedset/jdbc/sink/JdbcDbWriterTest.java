@@ -31,6 +31,7 @@ import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryK
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.PrimaryKeyMode.RECORD_VALUE;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.QUOTE_SQL_IDENTIFIERS_CONFIG;
 import static com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig.TABLE_NAME;
+import static com.findinpath.connect.nestedset.jdbc.util.StringUtils.isBlank;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.hamcrest.Matchers.equalTo;
@@ -94,8 +95,10 @@ public abstract class JdbcDbWriterTest {
         props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
         props.put(LOG_TABLE_NAME, NESTED_SET_LOG_TABLE_NAME);
         props.put(CONNECTION_URL, getJdbcUrl());
-        props.put(CONNECTION_USER, getJdbcUsername());
-        props.put(CONNECTION_PASSWORD, getJdbcPassword());
+        if (!isBlank(getJdbcUsername())) {
+            props.put(CONNECTION_USER, getJdbcUsername());
+            props.put(CONNECTION_PASSWORD, getJdbcPassword());
+        }
 
         JdbcSinkConfig config = new JdbcSinkConfig(props);
         DatabaseDialect dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
@@ -290,9 +293,10 @@ public abstract class JdbcDbWriterTest {
         props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
         props.put(LOG_TABLE_NAME, NESTED_SET_LOG_TABLE_NAME);
         props.put(CONNECTION_URL, getJdbcUrl());
-        props.put(CONNECTION_USER, getJdbcUsername());
-        props.put(CONNECTION_PASSWORD, getJdbcPassword());
-
+        if (!isBlank(getJdbcUsername())) {
+            props.put(CONNECTION_USER, getJdbcUsername());
+            props.put(CONNECTION_PASSWORD, getJdbcPassword());
+        }
         JdbcSinkConfig config = new JdbcSinkConfig(props);
         DatabaseDialect dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
         final DbStructure dbStructure = new DbStructure(dialect);
@@ -382,16 +386,16 @@ public abstract class JdbcDbWriterTest {
         assertOffsetAccuracyForSynchronizedRecords();
     }
 
+    protected void dropTableIfExists(String tableName) throws  SQLException{
+        jdbcHelper.execute("DROP TABLE IF EXISTS " + tableName);
+    }
+
     private Struct createNestedSetIncrementedStruct(long id, int left, int right, String label) {
         return new Struct(NESTED_SET_INCREMENTED_SCHEMA)
                 .put(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT, id)
                 .put(TABLE_LEFT_COLUMN_NAME_DEFAULT, left)
                 .put(TABLE_RIGHT_COLUMN_NAME_DEFAULT, right)
                 .put(TABLE_LABEL_COLUMN_NAME, label);
-    }
-
-    protected void dropTableIfExists(String tableName) throws  SQLException{
-        jdbcHelper.execute("DROP TABLE IF EXISTS " + tableName);
     }
 
     private Struct createNestedSetTimestampIncrementedStruct(long id, int left, int right, String label, long instantMilliseconds) {

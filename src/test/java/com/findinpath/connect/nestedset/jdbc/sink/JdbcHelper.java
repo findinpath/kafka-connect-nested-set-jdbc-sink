@@ -10,7 +10,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-public class JdbcHelper {
+import static com.findinpath.connect.nestedset.jdbc.util.StringUtils.isBlank;
+
+public class JdbcHelper implements AutoCloseable{
     private static final Logger log = LoggerFactory
             .getLogger(JdbcHelper.class);
 
@@ -20,11 +22,18 @@ public class JdbcHelper {
 
     private final Connection connection;
 
+    public JdbcHelper(String jdbcUrl) throws SQLException {
+        connection = DriverManager.getConnection(jdbcUrl);
+    }
     public JdbcHelper(String jdbcUrl, String username, String password) throws SQLException {
-        Properties connectionProps = new Properties();
-        connectionProps.put("user", username);
-        connectionProps.put("password", password);
-        connection = DriverManager.getConnection(jdbcUrl, connectionProps);
+        if (!isBlank(username)) {
+            Properties connectionProps = new Properties();
+            connectionProps.put("user", username);
+            connectionProps.put("password", password);
+            connection = DriverManager.getConnection(jdbcUrl, connectionProps);
+        }else{
+            connection = DriverManager.getConnection(jdbcUrl);
+        }
     }
 
     public int select(final String query, final JdbcHelper.ResultSetReadCallback callback) throws SQLException {
@@ -46,5 +55,10 @@ public class JdbcHelper {
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql);
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        connection.close();
     }
 }
