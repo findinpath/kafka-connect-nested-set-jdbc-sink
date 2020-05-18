@@ -16,7 +16,7 @@ package com.findinpath.connect.nestedset.jdbc.sink;
  * limitations under the License.
  */
 
-import com.findinpath.connect.nestedset.jdbc.testcontainers.OracleContainer;
+import com.findinpath.testcontainers.OracleContainer;
 import org.junit.jupiter.api.Disabled;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;

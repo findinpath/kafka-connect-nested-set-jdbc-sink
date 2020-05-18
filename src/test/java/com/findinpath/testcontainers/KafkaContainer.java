@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.findinpath.connect.nestedset.jdbc.testcontainers;
+package com.findinpath.testcontainers;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.TestcontainersConfiguration;
@@ -23,9 +23,9 @@ import org.testcontainers.utility.TestcontainersConfiguration;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.findinpath.connect.nestedset.jdbc.testcontainers.Utils.CONFLUENT_PLATFORM_VERSION;
-import static com.findinpath.connect.nestedset.jdbc.testcontainers.Utils.containerLogsConsumer;
-import static com.findinpath.connect.nestedset.jdbc.testcontainers.Utils.getRandomFreePort;
+import static com.findinpath.testcontainers.Utils.CONFLUENT_PLATFORM_VERSION;
+import static com.findinpath.testcontainers.Utils.containerLogsConsumer;
+import static com.findinpath.testcontainers.Utils.getRandomFreePort;
 import static java.lang.String.format;
 
 /**

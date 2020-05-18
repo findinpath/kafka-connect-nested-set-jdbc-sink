@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package com.findinpath.connect.nestedset.jdbc.testcontainers;
+package com.findinpath.testcontainers;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
-import static com.findinpath.connect.nestedset.jdbc.testcontainers.Utils.CONFLUENT_PLATFORM_VERSION;
-import static com.findinpath.connect.nestedset.jdbc.testcontainers.Utils.containerLogsConsumer;
+import static com.findinpath.testcontainers.Utils.CONFLUENT_PLATFORM_VERSION;
+import static com.findinpath.testcontainers.Utils.containerLogsConsumer;
 import static java.lang.String.format;
 
 /**

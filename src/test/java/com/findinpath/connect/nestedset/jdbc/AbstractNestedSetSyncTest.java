@@ -20,12 +20,10 @@ package com.findinpath.connect.nestedset.jdbc;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.findinpath.connect.nestedset.jdbc.testcontainers.KafkaConnectContainer;
-import com.findinpath.connect.nestedset.jdbc.testcontainers.KafkaContainer;
-import com.findinpath.connect.nestedset.jdbc.testcontainers.SchemaRegistryContainer;
-import com.findinpath.connect.nestedset.jdbc.testcontainers.ZookeeperContainer;
-import com.findinpath.connect.nestedset.jdbc.util.CachedConnectionProvider;
-import com.findinpath.connect.nestedset.jdbc.util.ConnectionProvider;
+import com.findinpath.testcontainers.KafkaConnectContainer;
+import com.findinpath.testcontainers.KafkaContainer;
+import com.findinpath.testcontainers.SchemaRegistryContainer;
+import com.findinpath.testcontainers.ZookeeperContainer;
 import com.findinpath.kafka.connect.model.ConnectorConfiguration;
 import io.restassured.http.ContentType;
 import org.apache.http.HttpStatus;

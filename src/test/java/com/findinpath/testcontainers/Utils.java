@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.findinpath.connect.nestedset.jdbc.testcontainers;
+package com.findinpath.testcontainers;
 
 import org.slf4j.Logger;
 import org.testcontainers.containers.output.OutputFrame;
