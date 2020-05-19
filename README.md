@@ -141,6 +141,16 @@ If the applied updates lead to a valid nested set model configuration, then the 
 table will be updated and the log offset will be set to the latest processed `nested_set_node_log` entry.
 Otherwise the `nested_set_node` table stays in its previous state. 
 
+
+## End to end tests
+
+This project contains end to end tests for the _kafka-connect-nested-set-jdbc-sink_ connector:
+
+![kafka-connect-nested-set-jdbc-sink End to End Test Architecture](images/end-to-end-test-architecture-diagram.png)
+
+Check [DemoNestedSetSyncTest.java](src/test/java/com/findinpath/connect/nestedset/jdbc/DemoNestedSetSyncTest.java)
+for implementation details.
+
 ## Contribute
 
 Source code: https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink
