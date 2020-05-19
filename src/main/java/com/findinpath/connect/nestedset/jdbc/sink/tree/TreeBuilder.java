@@ -35,19 +35,19 @@ public final class TreeBuilder {
     private TreeBuilder() {
     }
 
-    public static Optional<TreeNode> buildTree(List<NestedSetNode> nestedSetNodes) {
+    public static <T extends  NestedSetNode> Optional<TreeNode<T>> buildTree(List<T> nestedSetNodes) {
         if (!isValidNestedSet(nestedSetNodes)) return Optional.empty();
 
-        Iterator<NestedSetNode> nestedSetNodeIterator = nestedSetNodes
+        Iterator<T> nestedSetNodeIterator = nestedSetNodes
                 .stream()
                 .sorted(Comparator.comparing(NestedSetNode::getLeft))
                 .iterator();
-        NestedSetNode rootNestedSetNode = nestedSetNodeIterator.next();
-        TreeNode root = new TreeNode(rootNestedSetNode);
-        Stack<TreeNode> stack = new Stack<>();
+        T rootNestedSetNode = nestedSetNodeIterator.next();
+        TreeNode<T> root = new TreeNode<>(rootNestedSetNode);
+        Stack<TreeNode<T>> stack = new Stack<>();
         stack.push(root);
         while (nestedSetNodeIterator.hasNext()) {
-            NestedSetNode nestedSetNode = nestedSetNodeIterator.next();
+            T nestedSetNode = nestedSetNodeIterator.next();
 
             if (stack.isEmpty()) return Optional.empty();
             // find the corresponding parent node
@@ -55,19 +55,19 @@ public final class TreeBuilder {
                 stack.pop();
             }
             if (stack.isEmpty()) return Optional.empty();
-            TreeNode parent = stack.peek();
+            TreeNode<T> parent = stack.peek();
 
-            TreeNode child = parent.addChild(nestedSetNode);
+            TreeNode<T> child = parent.addChild(nestedSetNode);
             stack.push(child);
         }
         return Optional.of(root);
     }
 
-    private static boolean isValidNestedSet(List<NestedSetNode> nestedSetNodes) {
+    private static <T extends  NestedSetNode> boolean isValidNestedSet(List<T> nestedSetNodes) {
         if (nestedSetNodes == null || nestedSetNodes.isEmpty()) return false;
 
         Comparator<Integer> naturalOrdering = Integer::compareTo;
-        Optional<NestedSetNode> nestedSetNodeWithInvalidCoordinates = nestedSetNodes.stream()
+        Optional<T> nestedSetNodeWithInvalidCoordinates = nestedSetNodes.stream()
                 .filter(nestedSetNode -> !isValid(nestedSetNode))
                 .findAny();
         if (nestedSetNodeWithInvalidCoordinates.isPresent()) {
@@ -107,7 +107,7 @@ public final class TreeBuilder {
     }
 
 
-    private static boolean isValid(NestedSetNode nestedSetNode) {
+    private static <T extends  NestedSetNode> boolean isValid(T nestedSetNode) {
         return nestedSetNode.getLeft() < nestedSetNode.getRight();
     }
 

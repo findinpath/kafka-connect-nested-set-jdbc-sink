@@ -20,6 +20,7 @@ package com.findinpath.connect.nestedset.jdbc;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.findinpath.connect.nestedset.jdbc.util.ConnectionProvider;
 import com.findinpath.connect.nestedset.jdbc.util.Version;
 import com.findinpath.testcontainers.KafkaConnectContainer;
 import com.findinpath.testcontainers.KafkaContainer;
@@ -42,6 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.findinpath.testcontainers.KafkaConnectContainer.PLUGIN_PATH_CONTAINER;
@@ -130,6 +132,9 @@ public abstract class AbstractNestedSetSyncTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    protected Supplier<Connection> sourceConnectionProvider;
+    protected Supplier<Connection> sinkConnectionProvider;
+
     private String testUuid;
 
 
@@ -194,6 +199,9 @@ public abstract class AbstractNestedSetSyncTest {
     }
 
     protected void setup() throws Exception{
+        sourceConnectionProvider = () -> getConnection(sourcePostgreSQLContainer.getJdbcUrl(), POSTGRES_SOURCE_DB_USERNAME, POSTGRES_SOURCE_DB_PASSWORD);
+        sinkConnectionProvider = () -> getConnection(sinkPostgreSQLContainer.getJdbcUrl(), POSTGRES_SINK_DB_USERNAME, POSTGRES_SINK_DB_PASSWORD);
+
         truncateSourceTables();
         truncateSinkTables();
 
@@ -327,7 +335,7 @@ public abstract class AbstractNestedSetSyncTest {
     }
 
 
-    private static Connection getConnection(String jdbcUrl, String username, String password) throws SQLException{
+    private static Connection getConnection(String jdbcUrl, String username, String password) {
         Properties properties = new Properties();
         if (username != null) {
             properties.setProperty("user", username);
@@ -335,18 +343,22 @@ public abstract class AbstractNestedSetSyncTest {
         if (password != null) {
             properties.setProperty("password", password);
         }
-        return DriverManager.getConnection(jdbcUrl, properties);
+        try {
+            return DriverManager.getConnection(jdbcUrl, properties);
+        }catch(SQLException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void truncateSourceTables() throws SQLException{
-        try (Connection connection = getConnection(sourcePostgreSQLContainer.getJdbcUrl(), POSTGRES_SOURCE_DB_USERNAME, POSTGRES_SOURCE_DB_PASSWORD);
+        try (Connection connection = sourceConnectionProvider.get();
              PreparedStatement pstmt = connection.prepareStatement(TRUNCATE_SOURCE_NESTED_SET_NODE_SQL)) {
             pstmt.executeUpdate();
         }
     }
 
     private void truncateSinkTables() throws SQLException{
-        try (Connection connection = getConnection(sinkPostgreSQLContainer.getJdbcUrl(), POSTGRES_SINK_DB_USERNAME, POSTGRES_SINK_DB_PASSWORD);
+        try (Connection connection = sinkConnectionProvider.get();
              PreparedStatement pstmtNestedSetNode = connection.prepareStatement(TRUNCATE_SINK_NESTED_SET_NODE_SQL);
              PreparedStatement pstmtNestedSetNodeLog = connection.prepareStatement(TRUNCATE_SINK_NESTED_SET_NODE_LOG_SQL);
              PreparedStatement pstmtNestedSetNodeLogOffset = connection.prepareStatement(TRUNCATE_SINK_LOG_OFFSET_SQL);

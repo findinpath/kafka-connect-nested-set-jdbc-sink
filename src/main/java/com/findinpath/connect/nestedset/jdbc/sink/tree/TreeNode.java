@@ -25,34 +25,34 @@ import java.util.List;
  *
  * @see {@link TreeBuilder#buildTree(List)}
  */
-public class TreeNode {
-    private NestedSetNode nestedSetNode;
-    private List<TreeNode> children;
+public class TreeNode<T extends NestedSetNode> {
+    private T nestedSetNode;
+    private List<TreeNode<T>> children;
 
 
-    public TreeNode(NestedSetNode nestedSetNode) {
+    public TreeNode(T nestedSetNode) {
         this.nestedSetNode = nestedSetNode;
     }
 
-    public TreeNode(NestedSetNode nestedSetNode, List<TreeNode> children) {
+    public TreeNode(T nestedSetNode, List<TreeNode<T>> children) {
         this(nestedSetNode);
         this.children = children == null ? null : new ArrayList<>(children);
     }
 
-    public NestedSetNode getNestedSetNode() {
+    public T getNestedSetNode() {
         return nestedSetNode;
     }
 
-    public List<TreeNode> getChildren() {
+    public List<TreeNode<T>> getChildren() {
         return children;
     }
 
 
-    public TreeNode addChild(NestedSetNode nestedSetNode) {
+    public TreeNode<T> addChild(T nestedSetNode) {
         if (children == null) {
             children = new ArrayList<>();
         }
-        TreeNode child = new TreeNode(nestedSetNode);
+        TreeNode<T> child = new TreeNode(nestedSetNode);
         children.add(child);
         return child;
     }

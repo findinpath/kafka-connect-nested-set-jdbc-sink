@@ -280,7 +280,7 @@ public class NestedSetRecordsSynchronizer {
                 nestedSetLogTableRecordsValues,
                 getLogTableRecordNestedSetNodeId, getLogTableRecordOperationType, getLogTableRecordNestedSetNodeLeft, getLogTableRecordNestedSetNodeRight);
 
-        Optional<TreeNode> rootNode = TreeBuilder.buildTree(updatedNestedSetNodes);
+        Optional<? extends TreeNode> rootNode = TreeBuilder.buildTree(updatedNestedSetNodes);
 
         return rootNode.isPresent();
     }

@@ -12,6 +12,7 @@ CREATE TABLE nested_set_node(
 
 CREATE TABLE nested_set_node_log(
     log_id bigserial,
+    operation_type int NOT NULL,
     id bigint,
     label varchar(256),
     lft int NOT NULL,
@@ -19,7 +20,7 @@ CREATE TABLE nested_set_node_log(
     active boolean NOT NULL,
     created TIMESTAMP WITHOUT TIME ZONE DEFAULT timezone('utc' :: TEXT, now()),
     updated TIMESTAMP WITHOUT TIME ZONE DEFAULT timezone('utc' :: TEXT, now()),
-    primary key (id)
+    primary key (log_id)
 );
 
 CREATE TABLE nested_set_node_log_offset(
