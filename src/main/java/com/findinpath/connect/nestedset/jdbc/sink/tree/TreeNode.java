@@ -19,6 +19,7 @@ package com.findinpath.connect.nestedset.jdbc.sink.tree;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Specific tree node structure containing nested set nodes.
@@ -55,5 +56,19 @@ public class TreeNode<T extends NestedSetNode> {
         TreeNode<T> child = new TreeNode(nestedSetNode);
         children.add(child);
         return child;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TreeNode<?> treeNode = (TreeNode<?>) o;
+        return Objects.equals(nestedSetNode, treeNode.nestedSetNode) &&
+                Objects.equals(children, treeNode.children);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nestedSetNode, children);
     }
 }

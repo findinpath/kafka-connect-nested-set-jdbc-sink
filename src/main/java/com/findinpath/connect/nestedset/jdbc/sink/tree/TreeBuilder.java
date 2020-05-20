@@ -53,8 +53,8 @@ public final class TreeBuilder {
             // find the corresponding parent node
             while (stack.peek().getNestedSetNode().getRight() < nestedSetNode.getRight()) {
                 stack.pop();
+                if (stack.isEmpty()) return Optional.empty();
             }
-            if (stack.isEmpty()) return Optional.empty();
             TreeNode<T> parent = stack.peek();
 
             TreeNode<T> child = parent.addChild(nestedSetNode);
