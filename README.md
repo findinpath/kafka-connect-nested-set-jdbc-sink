@@ -142,6 +142,43 @@ table will be updated and the log offset will be set to the latest processed `ne
 Otherwise the `nested_set_node` table stays in its previous state. 
 
 
+## Connector configuration
+
+The connector configuration can be obtained by doing the following call on Kafka Connect REST API:
+
+```bash
+curl -s -X PUT http://localhost:8083/connector-plugins/NestedSetJdbcSinkConnector/config/validate --header 'Content-Type: application/json' -d $'{"connector.class": "com.findinpath.connect.nestedset.jdbc.NestedSetJdbcSinkConnector", "topics": "dummy"}' | jq
+```
+
+
+A sample configuration for the connector is shown below:
+
+```json
+{
+    "name": "findinpath-sink",
+    "config": {
+        "name": "findinpath-sink",
+        "connector.class": "com.findinpath.connect.nestedset.jdbc.NestedSetJdbcSinkConnector",
+        "tasks.max": "1",
+        "topics": "findinpath.nested_set_node",
+        "connection.url": "jdbc:postgresql://sink:5432/sink?loggerLevel=OFF",
+        "connection.user": "sa",
+        "connection.password": "p@ssw0rd!sink",
+        "pk.fields": "id",
+        "table.name": "nested_set_node",
+        "table.left.column.name": "lft",
+        "table.rgt.column.name": "rgt",
+        "log.table.name": "nested_set_node_log",
+        "log.table.primary.key.column.name": "log_id",
+        "log.offset.table.name": "nested_set_node_log_offset",
+        "log.offset.table.log.table.column.name": "log_table_name",
+        "log.offset.table.offset.column.name": "log_table_offset"
+    }
+}
+```
+
+
+
 ## End to end tests
 
 This project contains end to end tests for the _kafka-connect-nested-set-jdbc-sink_ connector:

@@ -251,9 +251,15 @@ public abstract class AbstractNestedSetSyncTest {
         config.put("connection.url", POSTGRES_SINK_INTERNAL_CONNECTION_URL);
         config.put("connection.user", POSTGRES_SINK_DB_USERNAME);
         config.put("connection.password", POSTGRES_SINK_DB_PASSWORD);
+        config.put("pk.fields", "id");
         config.put("table.name", NESTED_SET_NODE_SINK_TABLE_NAME);
+        config.put("table.left.column.name", "lft");
+        config.put("table.rgt.column.name", "rgt");
         config.put("log.table.name", NESTED_SET_NODE_SINK_LOG_TABLE_NAME);
+        config.put("log.table.primary.key.column.name", "log_id");
         config.put("log.offset.table.name", NESTED_SET_NODE_SINK_LOG_OFFSET_TABLE_NAME);
+        config.put("log.offset.table.log.table.column.name", "log_table_name");
+        config.put("log.offset.table.offset.column.name", "log_table_offset");
 
         ConnectorConfiguration nestedSetNodeSourceConnectorConfig = new ConnectorConfiguration(connectorName, config);
         registerConnector(nestedSetNodeSourceConnectorConfig);
