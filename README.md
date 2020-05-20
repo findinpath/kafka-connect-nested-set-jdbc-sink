@@ -170,6 +170,7 @@ A sample configuration for the connector is shown below:
         "table.rgt.column.name": "rgt",
         "log.table.name": "nested_set_node_log",
         "log.table.primary.key.column.name": "log_id",
+        "log.table.operation.type.column.name": "operation_type",
         "log.offset.table.name": "nested_set_node_log_offset",
         "log.offset.table.log.table.column.name": "log_table_name",
         "log.offset.table.offset.column.name": "log_table_offset"

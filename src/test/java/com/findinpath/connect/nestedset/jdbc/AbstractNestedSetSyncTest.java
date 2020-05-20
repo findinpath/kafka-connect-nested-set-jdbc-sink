@@ -257,6 +257,7 @@ public abstract class AbstractNestedSetSyncTest {
         config.put("table.rgt.column.name", "rgt");
         config.put("log.table.name", NESTED_SET_NODE_SINK_LOG_TABLE_NAME);
         config.put("log.table.primary.key.column.name", "log_id");
+        config.put("log.table.operation.type.column.name", "operation_type");
         config.put("log.offset.table.name", NESTED_SET_NODE_SINK_LOG_OFFSET_TABLE_NAME);
         config.put("log.offset.table.log.table.column.name", "log_table_name");
         config.put("log.offset.table.offset.column.name", "log_table_offset");
