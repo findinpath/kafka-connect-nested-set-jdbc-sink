@@ -68,7 +68,7 @@ INSERT INTO nested_set_node_log_offset (log_table_name, log_table_offset) VALUES
 In case that the tables existed already, just truncate their content:
 
 ```
-
+TRUNCATE TABLE nested_set_node_source;
 TRUNCATE TABLE nested_set_node_sink;
 TRUNCATE TABLE nested_set_node_sink_log;
 TRUNCATE TABLE nested_set_node_log_offset;
