@@ -178,6 +178,12 @@ A sample configuration for the connector is shown below:
 }
 ```
 
+## Quick start
+
+Checkout the following resources:
+
+- [TESTING_UPSERT.md](TESTING_UPSERT.md) for getting a grip on how to use the connector for syncing *upserts* (`INSERT`/`UPDATE` sql statements) in the nested set model
+- [TESTING_DELETE.md](TESTING_DELETE.md) for getting a grip on how to use the connector for syncing *deletes* (`DELETE` sql statements) in the nested set model
 
 
 ## End to end tests
