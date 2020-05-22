@@ -16,41 +16,42 @@
 package com.findinpath.connect.nestedset.jdbc.util;
 
 import com.findinpath.connect.nestedset.jdbc.dialect.DatabaseDialects;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 public class DatabaseDialectRecommender implements ConfigDef.Recommender, ConfigDef.Validator {
 
-  public static final DatabaseDialectRecommender INSTANCE = new DatabaseDialectRecommender();
+    public static final DatabaseDialectRecommender INSTANCE = new DatabaseDialectRecommender();
 
-  private static final List<Object> DIALECT_NAMES;
+    private static final List<Object> DIALECT_NAMES;
 
-  static {
-    DIALECT_NAMES = new ArrayList<>();
-    DIALECT_NAMES.add("");
-    DIALECT_NAMES.addAll(DatabaseDialects.registeredDialectNames());
-  }
-
-  public List<Object> validValues(String var1, Map<String, Object> var2) {
-    return DIALECT_NAMES;
-  }
-
-  public boolean visible(String var1, Map<String, Object> var2) {
-    return true;
-  }
-
-  @Override
-  public void ensureValid(String key, Object value) {
-    if (value != null && !DIALECT_NAMES.contains(value.toString())) {
-      throw new ConfigException(key, value, "Invalid enumerator");
+    static {
+        DIALECT_NAMES = new ArrayList<>();
+        DIALECT_NAMES.add("");
+        DIALECT_NAMES.addAll(DatabaseDialects.registeredDialectNames());
     }
-  }
 
-  @Override
-  public String toString() {
-    return DIALECT_NAMES.toString();
-  }
+    public List<Object> validValues(String var1, Map<String, Object> var2) {
+        return DIALECT_NAMES;
+    }
+
+    public boolean visible(String var1, Map<String, Object> var2) {
+        return true;
+    }
+
+    @Override
+    public void ensureValid(String key, Object value) {
+        if (value != null && !DIALECT_NAMES.contains(value.toString())) {
+            throw new ConfigException(key, value, "Invalid enumerator");
+        }
+    }
+
+    @Override
+    public String toString() {
+        return DIALECT_NAMES.toString();
+    }
 }

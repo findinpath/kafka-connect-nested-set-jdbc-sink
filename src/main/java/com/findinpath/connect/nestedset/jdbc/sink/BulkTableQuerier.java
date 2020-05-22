@@ -23,15 +23,15 @@ public class BulkTableQuerier {
 
 
     public BulkTableQuerier(DatabaseDialect dialect,
-                                    TableId tableId) {
+                            TableId tableId) {
         this.dialect = dialect;
         this.tableId = tableId;
     }
 
     public ResultSetRecords extractRecords(Connection connection) throws SQLException {
-        try(PreparedStatement stmt = createPreparedStatement(connection); ResultSet resultSet = executeQuery(stmt)){
+        try (PreparedStatement stmt = createPreparedStatement(connection); ResultSet resultSet = executeQuery(stmt)) {
 
-            ResultSetMetaData  resultSetMetaData = resultSet.getMetaData();
+            ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
             List<String> columnNames = new ArrayList<>();
             for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++)
                 columnNames.add(resultSetMetaData.getColumnName(i));

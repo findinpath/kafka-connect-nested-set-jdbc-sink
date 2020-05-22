@@ -29,26 +29,22 @@ import java.util.Properties;
 
 import static com.findinpath.connect.nestedset.jdbc.util.StringUtils.isBlank;
 
-public class JdbcHelper implements AutoCloseable{
+public class JdbcHelper implements AutoCloseable {
     private static final Logger log = LoggerFactory
             .getLogger(JdbcHelper.class);
-
-    public interface ResultSetReadCallback {
-        void read(final ResultSet rs) throws SQLException;
-    }
-
     private final Connection connection;
 
     public JdbcHelper(String jdbcUrl) throws SQLException {
         connection = DriverManager.getConnection(jdbcUrl);
     }
+
     public JdbcHelper(String jdbcUrl, String username, String password) throws SQLException {
         if (!isBlank(username)) {
             Properties connectionProps = new Properties();
             connectionProps.put("user", username);
             connectionProps.put("password", password);
             connection = DriverManager.getConnection(jdbcUrl, connectionProps);
-        }else{
+        } else {
             connection = DriverManager.getConnection(jdbcUrl);
         }
     }
@@ -77,5 +73,9 @@ public class JdbcHelper implements AutoCloseable{
     @Override
     public void close() throws Exception {
         connection.close();
+    }
+
+    public interface ResultSetReadCallback {
+        void read(final ResultSet rs) throws SQLException;
     }
 }

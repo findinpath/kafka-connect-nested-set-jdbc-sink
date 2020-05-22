@@ -68,7 +68,7 @@ import java.util.Map;
  * the Connect {@link Schema} types and how database values are converted into the {@link Field}
  * values added to those {@link Struct} objects.
  *
-
+ *
  * <p>At the same time it builds the {@link Schema} for a new result set, the connector will also
  * build for each result set column a {@link ColumnConverter} function that the connector will use
  * to convert the corresponding column value in every row of the result set. These converters are
@@ -120,380 +120,380 @@ import java.util.Map;
  */
 public interface DatabaseDialect extends ConnectionProvider {
 
-  /**
-   * Return the name of the dialect.
-   *
-   * @return the dialect's name; never null
-   */
-  String name();
+    /**
+     * Return the name of the dialect.
+     *
+     * @return the dialect's name; never null
+     */
+    String name();
 
-  /**
-   * Create a new prepared statement using the specified database connection.
-   *
-   * @param connection the database connection; may not be null
-   * @param query      the query expression for the prepared statement; may not be null
-   * @return a new prepared statement; never null
-   * @throws SQLException if there is an error with the database connection
-   */
-  PreparedStatement createPreparedStatement(
-      Connection connection,
-      String query
-  ) throws SQLException;
+    /**
+     * Create a new prepared statement using the specified database connection.
+     *
+     * @param connection the database connection; may not be null
+     * @param query      the query expression for the prepared statement; may not be null
+     * @return a new prepared statement; never null
+     * @throws SQLException if there is an error with the database connection
+     */
+    PreparedStatement createPreparedStatement(
+            Connection connection,
+            String query
+    ) throws SQLException;
 
-  /**
-   * Parse the supplied simple name or fully qualified name for a table into a {@link TableId}.
-   *
-   * @param fqn the fully qualified string representation; may not be null
-   * @return the table identifier; never null
-   */
-  TableId parseTableIdentifier(String fqn);
+    /**
+     * Parse the supplied simple name or fully qualified name for a table into a {@link TableId}.
+     *
+     * @param fqn the fully qualified string representation; may not be null
+     * @return the table identifier; never null
+     */
+    TableId parseTableIdentifier(String fqn);
 
-  /**
-   * Get the identifier rules for this database.
-   *
-   * @return the identifier rules
-   */
-  IdentifierRules identifierRules();
+    /**
+     * Get the identifier rules for this database.
+     *
+     * @return the identifier rules
+     */
+    IdentifierRules identifierRules();
 
-  /**
-   * Get a new {@link ExpressionBuilder} that can be used to build expressions with quoted
-   * identifiers.
-   *
-   * @return the builder; never null
-   * @see #identifierRules()
-   * @see IdentifierRules#expressionBuilder()
-   */
-  ExpressionBuilder expressionBuilder();
+    /**
+     * Get a new {@link ExpressionBuilder} that can be used to build expressions with quoted
+     * identifiers.
+     *
+     * @return the builder; never null
+     * @see #identifierRules()
+     * @see IdentifierRules#expressionBuilder()
+     */
+    ExpressionBuilder expressionBuilder();
 
-  /**
-   * Return current time at the database
-   *
-   * @param connection database connection
-   * @param cal        calendar
-   * @return the current time at the database
-   * @throws SQLException if there is an error with the database connection
-   */
-  Timestamp currentTimeOnDB(
-      Connection connection,
-      Calendar cal
-  ) throws SQLException, ConnectException;
+    /**
+     * Return current time at the database
+     *
+     * @param connection database connection
+     * @param cal        calendar
+     * @return the current time at the database
+     * @throws SQLException if there is an error with the database connection
+     */
+    Timestamp currentTimeOnDB(
+            Connection connection,
+            Calendar cal
+    ) throws SQLException, ConnectException;
 
-  /**
-   * Get a list of identifiers of the non-system tables in the database.
-   *
-   * @param connection database connection
-   * @return a list of tables; never null
-   * @throws SQLException if there is an error with the database connection
-   */
-  List<TableId> tableIds(Connection connection) throws SQLException;
+    /**
+     * Get a list of identifiers of the non-system tables in the database.
+     *
+     * @param connection database connection
+     * @return a list of tables; never null
+     * @throws SQLException if there is an error with the database connection
+     */
+    List<TableId> tableIds(Connection connection) throws SQLException;
 
-  /**
-   * Determine if the specified table exists in the database.
-   *
-   * @param connection the database connection; may not be null
-   * @param tableId    the identifier of the table; may not be null
-   * @return true if the table exists, or false otherwise
-   * @throws SQLException if there is an error accessing the metadata
-   */
-  boolean tableExists(Connection connection, TableId tableId) throws SQLException;
+    /**
+     * Determine if the specified table exists in the database.
+     *
+     * @param connection the database connection; may not be null
+     * @param tableId    the identifier of the table; may not be null
+     * @return true if the table exists, or false otherwise
+     * @throws SQLException if there is an error accessing the metadata
+     */
+    boolean tableExists(Connection connection, TableId tableId) throws SQLException;
 
-  /**
-   * Create the definition for the columns described by the database metadata using the current
-   * schema and catalog patterns defined in the configuration.
-   *
-   * @param connection    the database connection; may not be null
-   * @param tablePattern  the pattern for matching the tables; may be null
-   * @param columnPattern the pattern for matching the columns; may be null
-   * @return the column definitions keyed by their {@link ColumnId}; never null
-   * @throws SQLException if there is an error accessing the metadata
-   */
-  Map<ColumnId, ColumnDefinition> describeColumns(
-      Connection connection,
-      String tablePattern,
-      String columnPattern
-  ) throws SQLException;
+    /**
+     * Create the definition for the columns described by the database metadata using the current
+     * schema and catalog patterns defined in the configuration.
+     *
+     * @param connection    the database connection; may not be null
+     * @param tablePattern  the pattern for matching the tables; may be null
+     * @param columnPattern the pattern for matching the columns; may be null
+     * @return the column definitions keyed by their {@link ColumnId}; never null
+     * @throws SQLException if there is an error accessing the metadata
+     */
+    Map<ColumnId, ColumnDefinition> describeColumns(
+            Connection connection,
+            String tablePattern,
+            String columnPattern
+    ) throws SQLException;
 
-  /**
-   * Create the definition for the columns described by the database metadata.
-   *
-   * @param connection     the database connection; may not be null
-   * @param catalogPattern the pattern for matching the catalog; may be null
-   * @param schemaPattern  the pattern for matching the schemas; may be null
-   * @param tablePattern   the pattern for matching the tables; may be null
-   * @param columnPattern  the pattern for matching the columns; may be null
-   * @return the column definitions keyed by their {@link ColumnId}; never null
-   * @throws SQLException if there is an error accessing the metadata
-   */
-  Map<ColumnId, ColumnDefinition> describeColumns(
-      Connection connection,
-      String catalogPattern,
-      String schemaPattern,
-      String tablePattern,
-      String columnPattern
-  ) throws SQLException;
+    /**
+     * Create the definition for the columns described by the database metadata.
+     *
+     * @param connection     the database connection; may not be null
+     * @param catalogPattern the pattern for matching the catalog; may be null
+     * @param schemaPattern  the pattern for matching the schemas; may be null
+     * @param tablePattern   the pattern for matching the tables; may be null
+     * @param columnPattern  the pattern for matching the columns; may be null
+     * @return the column definitions keyed by their {@link ColumnId}; never null
+     * @throws SQLException if there is an error accessing the metadata
+     */
+    Map<ColumnId, ColumnDefinition> describeColumns(
+            Connection connection,
+            String catalogPattern,
+            String schemaPattern,
+            String tablePattern,
+            String columnPattern
+    ) throws SQLException;
 
-  /**
-   * Create the definition for the columns in the result set.
-   *
-   * @param rsMetadata the result set metadata; may not be null
-   * @return the column definitions keyed by their {@link ColumnId} and in the same order as the
-   *     result set; never null
-   * @throws SQLException if there is an error accessing the result set metadata
-   */
-  Map<ColumnId, ColumnDefinition> describeColumns(
-      ResultSetMetaData rsMetadata
-  ) throws SQLException;
+    /**
+     * Create the definition for the columns in the result set.
+     *
+     * @param rsMetadata the result set metadata; may not be null
+     * @return the column definitions keyed by their {@link ColumnId} and in the same order as the
+     * result set; never null
+     * @throws SQLException if there is an error accessing the result set metadata
+     */
+    Map<ColumnId, ColumnDefinition> describeColumns(
+            ResultSetMetaData rsMetadata
+    ) throws SQLException;
 
-  /**
-   * Get the definition of the specified table.
-   *
-   * @param connection the database connection; may not be null
-   * @param tableId    the identifier of the table; may not be null
-   * @return the table definition; null if the table does not exist
-   * @throws SQLException if there is an error accessing the metadata
-   */
-  TableDefinition describeTable(Connection connection, TableId tableId) throws SQLException;
+    /**
+     * Get the definition of the specified table.
+     *
+     * @param connection the database connection; may not be null
+     * @param tableId    the identifier of the table; may not be null
+     * @return the table definition; null if the table does not exist
+     * @throws SQLException if there is an error accessing the metadata
+     */
+    TableDefinition describeTable(Connection connection, TableId tableId) throws SQLException;
 
-  /**
-   * Create the definition for the columns in the result set returned when querying the table. This
-   * may not work if the table is empty.
-   *
-   * @param connection the database connection; may not be null
-   * @param tableId    the name of the table; may be null
-   * @return the column definitions keyed by their {@link ColumnId}; never null
-   * @throws SQLException if there is an error accessing the result set metadata
-   */
-  Map<ColumnId, ColumnDefinition> describeColumnsByQuerying(
-      Connection connection,
-      TableId tableId
-  ) throws SQLException;
+    /**
+     * Create the definition for the columns in the result set returned when querying the table. This
+     * may not work if the table is empty.
+     *
+     * @param connection the database connection; may not be null
+     * @param tableId    the name of the table; may be null
+     * @return the column definitions keyed by their {@link ColumnId}; never null
+     * @throws SQLException if there is an error accessing the result set metadata
+     */
+    Map<ColumnId, ColumnDefinition> describeColumnsByQuerying(
+            Connection connection,
+            TableId tableId
+    ) throws SQLException;
 
-  /**
-   * Use the supplied {@link SchemaBuilder} to add a field that corresponds to the column with the
-   * specified definition.
-   *
-   * @param column  the definition of the column; may not be null
-   * @param builder the schema builder; may not be null
-   * @return the name of the field, or null if no field was added
-   */
-  String addFieldToSchema(ColumnDefinition column, SchemaBuilder builder);
+    /**
+     * Use the supplied {@link SchemaBuilder} to add a field that corresponds to the column with the
+     * specified definition.
+     *
+     * @param column  the definition of the column; may not be null
+     * @param builder the schema builder; may not be null
+     * @return the name of the field, or null if no field was added
+     */
+    String addFieldToSchema(ColumnDefinition column, SchemaBuilder builder);
 
-  /**
-   * Apply the supplied DDL statements using the given connection. This gives the dialect the
-   * opportunity to execute the statements with a different autocommit setting.
-   *
-   * @param connection the connection to use
-   * @param statements the list of DDL statements to execute
-   * @throws SQLException if there is an error executing the statements
-   */
-  void applyDdlStatements(Connection connection, List<String> statements) throws SQLException;
+    /**
+     * Apply the supplied DDL statements using the given connection. This gives the dialect the
+     * opportunity to execute the statements with a different autocommit setting.
+     *
+     * @param connection the connection to use
+     * @param statements the list of DDL statements to execute
+     * @throws SQLException if there is an error executing the statements
+     */
+    void applyDdlStatements(Connection connection, List<String> statements) throws SQLException;
 
-  /**
-   * Build the INSERT prepared statement expression for the given table and its columns.
-   *
-   * @param table         the identifier of the table; may not be null
-   * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
-   *                      but may be empty
-   * @param nonKeyColumns the identifiers of the other columns in the table; may not be null but may
-   *                      be empty
-   * @return the INSERT statement; may not be null
-   */
-  String buildInsertStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
-  );
+    /**
+     * Build the INSERT prepared statement expression for the given table and its columns.
+     *
+     * @param table         the identifier of the table; may not be null
+     * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
+     *                      but may be empty
+     * @param nonKeyColumns the identifiers of the other columns in the table; may not be null but may
+     *                      be empty
+     * @return the INSERT statement; may not be null
+     */
+    String buildInsertStatement(
+            TableId table,
+            Collection<ColumnId> keyColumns,
+            Collection<ColumnId> nonKeyColumns
+    );
 
-  /**
-   * Build the UPDATE prepared statement expression for the given table and its columns. Variables
-   * for each key column should also appear in the WHERE clause of the statement.
-   *
-   * @param table         the identifier of the table; may not be null
-   * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
-   *                      but may be empty
-   * @param nonKeyColumns the identifiers of the other columns in the table; may not be null but may
-   *                      be empty
-   * @return the UPDATE statement; may not be null
-   */
-  String buildUpdateStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
-  );
+    /**
+     * Build the UPDATE prepared statement expression for the given table and its columns. Variables
+     * for each key column should also appear in the WHERE clause of the statement.
+     *
+     * @param table         the identifier of the table; may not be null
+     * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
+     *                      but may be empty
+     * @param nonKeyColumns the identifiers of the other columns in the table; may not be null but may
+     *                      be empty
+     * @return the UPDATE statement; may not be null
+     */
+    String buildUpdateStatement(
+            TableId table,
+            Collection<ColumnId> keyColumns,
+            Collection<ColumnId> nonKeyColumns
+    );
 
-  /**
-   * Build the UPSERT or MERGE prepared statement expression to either insert a new record into the
-   * given table or update an existing record in that table Variables for each key column should
-   * also appear in the WHERE clause of the statement.
-   *
-   * @param table         the identifier of the table; may not be null
-   * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
-   *                      but may be empty
-   * @param nonKeyColumns the identifiers of the other columns in the table; may not be null but may
-   *                      be empty
-   * @return the upsert/merge statement; may not be null
-   * @throws UnsupportedOperationException if the dialect does not support upserts
-   */
-  String buildUpsertQueryStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
-  );
+    /**
+     * Build the UPSERT or MERGE prepared statement expression to either insert a new record into the
+     * given table or update an existing record in that table Variables for each key column should
+     * also appear in the WHERE clause of the statement.
+     *
+     * @param table         the identifier of the table; may not be null
+     * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
+     *                      but may be empty
+     * @param nonKeyColumns the identifiers of the other columns in the table; may not be null but may
+     *                      be empty
+     * @return the upsert/merge statement; may not be null
+     * @throws UnsupportedOperationException if the dialect does not support upserts
+     */
+    String buildUpsertQueryStatement(
+            TableId table,
+            Collection<ColumnId> keyColumns,
+            Collection<ColumnId> nonKeyColumns
+    );
 
-  /**
-   * Build the DELETE prepared statement expression for the given table and its columns. Variables
-   * for each key column should also appear in the WHERE clause of the statement.
-   *
-   * @param table         the identifier of the table; may not be null
-   * @param keyColumns    the identifiers of the columns in the primary/unique key; may not be null
-   *                      but may be empty
-   * @return the delete statement; may not be null
-   * @throws UnsupportedOperationException if the dialect does not support deletes
-   */
-  default String buildDeleteStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns
-  ) {
-    throw new UnsupportedOperationException();
-  }
+    /**
+     * Build the DELETE prepared statement expression for the given table and its columns. Variables
+     * for each key column should also appear in the WHERE clause of the statement.
+     *
+     * @param table      the identifier of the table; may not be null
+     * @param keyColumns the identifiers of the columns in the primary/unique key; may not be null
+     *                   but may be empty
+     * @return the delete statement; may not be null
+     * @throws UnsupportedOperationException if the dialect does not support deletes
+     */
+    default String buildDeleteStatement(
+            TableId table,
+            Collection<ColumnId> keyColumns
+    ) {
+        throw new UnsupportedOperationException();
+    }
 
-  /**
-   * Build the DROP TABLE statement expression for the given table.
-   *
-   * @param table   the identifier of the table; may not be null
-   * @param options the options; may be null
-   * @return the DROP TABLE statement; may not be null
-   */
-  String buildDropTableStatement(TableId table, DropOptions options);
+    /**
+     * Build the DROP TABLE statement expression for the given table.
+     *
+     * @param table   the identifier of the table; may not be null
+     * @param options the options; may be null
+     * @return the DROP TABLE statement; may not be null
+     */
+    String buildDropTableStatement(TableId table, DropOptions options);
 
-  /**
-   * Build the CREATE TABLE statement expression for the given table and its columns.
-   *
-   * @param table  the identifier of the table; may not be null
-   * @param fields the information about the fields in the sink records; may not be null
-   * @return the CREATE TABLE statement; may not be null
-   */
-  String buildCreateTableStatement(TableId table, Collection<SinkRecordField> fields);
+    /**
+     * Build the CREATE TABLE statement expression for the given table and its columns.
+     *
+     * @param table  the identifier of the table; may not be null
+     * @param fields the information about the fields in the sink records; may not be null
+     * @return the CREATE TABLE statement; may not be null
+     */
+    String buildCreateTableStatement(TableId table, Collection<SinkRecordField> fields);
 
-  /**
-   * Build the CREATE TABLE statement(s) expression for the given nested set log table and its columns.
-   * NOTE that in some databases (e.g. : Oracle) there may be needed more statements for creating
-   * the log table with an autoincrement primary key field.
-   *
-   * @param table  the identifier of the nested set log table; may not be null
-   * @param primaryKeyColumnName the name used for the primary key column in the log table.
-   * @param operationTypeColumnName the name used for the operation type (upsert/delete) column in the log table.
-   * @param fields the information about the fields in the sink records; may not be null
-   * @return the statements needed for creating the log table; may not be null
-   */
-  List<String> buildCreateLogTableStatements(TableId table,
-                                             String primaryKeyColumnName,
-                                             String operationTypeColumnName,
-                                             Collection<SinkRecordField> fields);
+    /**
+     * Build the CREATE TABLE statement(s) expression for the given nested set log table and its columns.
+     * NOTE that in some databases (e.g. : Oracle) there may be needed more statements for creating
+     * the log table with an autoincrement primary key field.
+     *
+     * @param table                   the identifier of the nested set log table; may not be null
+     * @param primaryKeyColumnName    the name used for the primary key column in the log table.
+     * @param operationTypeColumnName the name used for the operation type (upsert/delete) column in the log table.
+     * @param fields                  the information about the fields in the sink records; may not be null
+     * @return the statements needed for creating the log table; may not be null
+     */
+    List<String> buildCreateLogTableStatements(TableId table,
+                                               String primaryKeyColumnName,
+                                               String operationTypeColumnName,
+                                               Collection<SinkRecordField> fields);
 
-  /**
-   * Build the CREATE TABLE statement(s) expression for the given nested set log offset table and its columns.
-   *
-   * @param table  the identifier of the nested set log table; may not be null
-   * @param logTableColumnName the name used for the primary key column in the log offset table.
-   * @param offsetColumnName the name for the column holding the sync offset
-   * @return the statements needed for creating the log table; may not be null
-   */
-  String buildCreateLogOffsetTableStatement(TableId table, String logTableColumnName, String offsetColumnName);
+    /**
+     * Build the CREATE TABLE statement(s) expression for the given nested set log offset table and its columns.
+     *
+     * @param table              the identifier of the nested set log table; may not be null
+     * @param logTableColumnName the name used for the primary key column in the log offset table.
+     * @param offsetColumnName   the name for the column holding the sync offset
+     * @return the statements needed for creating the log table; may not be null
+     */
+    String buildCreateLogOffsetTableStatement(TableId table, String logTableColumnName, String offsetColumnName);
 
-  /**
-   * Build the ALTER TABLE statement expression for the given table and its columns.
-   *
-   * @param table  the identifier of the table; may not be null
-   * @param fields the information about the fields in the sink records; may not be null
-   * @return the ALTER TABLE statement; may not be null
-   */
-  List<String> buildAlterTable(TableId table, Collection<SinkRecordField> fields);
+    /**
+     * Build the ALTER TABLE statement expression for the given table and its columns.
+     *
+     * @param table  the identifier of the table; may not be null
+     * @param fields the information about the fields in the sink records; may not be null
+     * @return the ALTER TABLE statement; may not be null
+     */
+    List<String> buildAlterTable(TableId table, Collection<SinkRecordField> fields);
 
-  List<String> buildAlterLogTable(TableId table, Collection<SinkRecordField> fields);
+    List<String> buildAlterLogTable(TableId table, Collection<SinkRecordField> fields);
 
-  /**
-   * Create a component that can bind record values into the supplied prepared statement.
-   *
-   * @param statement      the prepared statement
-   * @param pkMode         the primary key mode; may not be null
-   * @param schemaPair     the key and value schemas; may not be null
-   * @param fieldsMetadata the field metadata; may not be null
-   * @return the statement binder; may not be null
-   * @see #bindField(PreparedStatement, int, Schema, Object)
-   */
-  LogTableStatementBinder statementBinder(
-      PreparedStatement statement,
-      PrimaryKeyMode pkMode,
-      SchemaPair schemaPair,
-      FieldsMetadata fieldsMetadata
-  );
+    /**
+     * Create a component that can bind record values into the supplied prepared statement.
+     *
+     * @param statement      the prepared statement
+     * @param pkMode         the primary key mode; may not be null
+     * @param schemaPair     the key and value schemas; may not be null
+     * @param fieldsMetadata the field metadata; may not be null
+     * @return the statement binder; may not be null
+     * @see #bindField(PreparedStatement, int, Schema, Object)
+     */
+    LogTableStatementBinder statementBinder(
+            PreparedStatement statement,
+            PrimaryKeyMode pkMode,
+            SchemaPair schemaPair,
+            FieldsMetadata fieldsMetadata
+    );
 
-  /**
-   * Method that binds a value with the given schema at the specified variable within a prepared
-   * statement.
-   *
-   * @param statement the prepared statement; may not be null
-   * @param index     the 1-based index of the variable within the prepared statement
-   * @param schema    the schema for the value; may be null only if the value is null
-   * @param value     the value to be bound to the variable; may be null
-   * @throws SQLException if there is a problem binding the value into the statement
-   * @see #statementBinder
-   */
-  void bindField(
-      PreparedStatement statement,
-      int index,
-      Schema schema,
-      Object value
-  ) throws SQLException;
+    /**
+     * Method that binds a value with the given schema at the specified variable within a prepared
+     * statement.
+     *
+     * @param statement the prepared statement; may not be null
+     * @param index     the 1-based index of the variable within the prepared statement
+     * @param schema    the schema for the value; may be null only if the value is null
+     * @param value     the value to be bound to the variable; may be null
+     * @throws SQLException if there is a problem binding the value into the statement
+     * @see #statementBinder
+     */
+    void bindField(
+            PreparedStatement statement,
+            int index,
+            Schema schema,
+            Object value
+    ) throws SQLException;
 
 
+    void appendWhereCriteria(ExpressionBuilder builder,
+                             ColumnId logTableIncrementingColumn,
+                             TableId logOffsetTableId,
+                             ColumnId logOffsetTableLogTableColumn,
+                             ColumnId logOffsetTableOffsetColumn);
 
-  void appendWhereCriteria(ExpressionBuilder builder,
-                                  ColumnId logTableIncrementingColumn,
-                                  TableId logOffsetTableId,
-                                  ColumnId logOffsetTableLogTableColumn,
-                                  ColumnId logOffsetTableOffsetColumn);
+    /**
+     * Create a function that converts column values for the column defined by the specified mapping.
+     *
+     * @param mapping the column definition and the corresponding {@link Field}; may not be null
+     * @return the column converter function; or null if the column should be ignored
+     */
+    ColumnConverter createColumnConverter(ColumnMapping mapping);
+
     /**
      * A function to bind the values from a sink record into a prepared statement.
      */
-  @FunctionalInterface
-  interface LogTableStatementBinder {
+    @FunctionalInterface
+    interface LogTableStatementBinder {
+
+        /**
+         * Bind the values in the supplied record.
+         *
+         * @param record        the sink record with values to be bound into the statement; never null
+         * @param operationType the operation to be done (upsert/delete); never null
+         * @throws SQLException if there is a problem binding values into the statement
+         */
+        void bindRecord(SinkRecord record, OperationType operationType) throws SQLException;
+    }
 
     /**
-     * Bind the values in the supplied record.
-     *
-     * @param record the sink record with values to be bound into the statement; never null
-     * @param operationType the operation to be done (upsert/delete); never null
-     * @throws SQLException if there is a problem binding values into the statement
+     * A function that obtains a column value from the current row of the specified result set.
      */
-    void bindRecord(SinkRecord record, OperationType operationType) throws SQLException;
-  }
+    @FunctionalInterface
+    interface ColumnConverter {
 
-  /**
-   * Create a function that converts column values for the column defined by the specified mapping.
-   *
-   * @param mapping the column definition and the corresponding {@link Field}; may not be null
-   * @return the column converter function; or null if the column should be ignored
-   */
-  ColumnConverter createColumnConverter(ColumnMapping mapping);
-
-  /**
-   * A function that obtains a column value from the current row of the specified result set.
-   */
-  @FunctionalInterface
-  interface ColumnConverter {
-
-    /**
-     * Get the column's value from the row at the current position in the result set, and convert it
-     * to a value that should be included in the corresponding {@link Field} in the {@link Struct}
-     * for the row.
-     *
-     * @param resultSet the result set; never null
-     * @return the value of the {@link Field} as converted from the column value
-     * @throws SQLException if there is an error with the database connection
-     * @throws IOException  if there is an error accessing a streaming value from the result set
-     */
-    Object convert(ResultSet resultSet) throws SQLException, IOException;
-  }
+        /**
+         * Get the column's value from the row at the current position in the result set, and convert it
+         * to a value that should be included in the corresponding {@link Field} in the {@link Struct}
+         * for the row.
+         *
+         * @param resultSet the result set; never null
+         * @return the value of the {@link Field} as converted from the column value
+         * @throws SQLException if there is an error with the database connection
+         * @throws IOException  if there is an error accessing a streaming value from the result set
+         */
+        Object convert(ResultSet resultSet) throws SQLException, IOException;
+    }
 }

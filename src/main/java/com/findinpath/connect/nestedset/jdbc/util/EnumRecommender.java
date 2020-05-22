@@ -15,71 +15,72 @@
 
 package com.findinpath.connect.nestedset.jdbc.util;
 
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
 public class EnumRecommender implements ConfigDef.Validator, ConfigDef.Recommender {
-  private final List<String> canonicalValues;
-  private final Set<String> validValues;
+    private final List<String> canonicalValues;
+    private final Set<String> validValues;
 
-  private EnumRecommender(List<String> canonicalValues, Set<String> validValues) {
-    this.canonicalValues = canonicalValues;
-    this.validValues = validValues;
-  }
-
-  @SafeVarargs
-  public static <E> EnumRecommender in(E... enumerators) {
-    final List<String> canonicalValues = new ArrayList<>(enumerators.length);
-    final Set<String> validValues = new HashSet<>(enumerators.length * 2);
-    for (E e : enumerators) {
-      canonicalValues.add(e.toString().toLowerCase());
-      validValues.add(e.toString().toUpperCase(Locale.ROOT));
-      validValues.add(e.toString().toLowerCase(Locale.ROOT));
+    private EnumRecommender(List<String> canonicalValues, Set<String> validValues) {
+        this.canonicalValues = canonicalValues;
+        this.validValues = validValues;
     }
-    return new EnumRecommender(canonicalValues, validValues);
-  }
 
-  @Override
-  public void ensureValid(String key, Object value) {
-    if (value instanceof List) {
-      List<?> values = (List<?>) value;
-      for (Object v : values) {
-        if (v == null) {
-          validate(key, null);
-        } else {
-          validate(key, v);
+    @SafeVarargs
+    public static <E> EnumRecommender in(E... enumerators) {
+        final List<String> canonicalValues = new ArrayList<>(enumerators.length);
+        final Set<String> validValues = new HashSet<>(enumerators.length * 2);
+        for (E e : enumerators) {
+            canonicalValues.add(e.toString().toLowerCase());
+            validValues.add(e.toString().toUpperCase(Locale.ROOT));
+            validValues.add(e.toString().toLowerCase(Locale.ROOT));
         }
-      }
-    } else {
-      validate(key, value);
+        return new EnumRecommender(canonicalValues, validValues);
     }
-  }
 
-  protected void validate(String key, Object value) {
-    // calling toString on itself because IDE complains if the Object is passed.
-    if (value != null && !validValues.contains(value.toString())) {
-      throw new ConfigException(key, value, "Invalid enumerator");
+    @Override
+    public void ensureValid(String key, Object value) {
+        if (value instanceof List) {
+            List<?> values = (List<?>) value;
+            for (Object v : values) {
+                if (v == null) {
+                    validate(key, null);
+                } else {
+                    validate(key, v);
+                }
+            }
+        } else {
+            validate(key, value);
+        }
     }
-  }
 
-  @Override
-  public String toString() {
-    return canonicalValues.toString();
-  }
+    protected void validate(String key, Object value) {
+        // calling toString on itself because IDE complains if the Object is passed.
+        if (value != null && !validValues.contains(value.toString())) {
+            throw new ConfigException(key, value, "Invalid enumerator");
+        }
+    }
 
-  @Override
-  public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
-    return new ArrayList<>(canonicalValues);
-  }
+    @Override
+    public String toString() {
+        return canonicalValues.toString();
+    }
 
-  @Override
-  public boolean visible(String name, Map<String, Object> connectorConfigs) {
-    return true;
-  }
+    @Override
+    public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
+        return new ArrayList<>(canonicalValues);
+    }
+
+    @Override
+    public boolean visible(String name, Map<String, Object> connectorConfigs) {
+        return true;
+    }
 }

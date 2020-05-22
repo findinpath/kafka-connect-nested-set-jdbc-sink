@@ -27,12 +27,11 @@ import java.nio.file.Paths;
 import java.sql.SQLException;
 
 public class SqliteJdbcDbWriterTest extends JdbcDbWriterTest {
-    private static Path dbPath;
-
     private static final String CREATE_NESTED_SET_SYNC_OFFSET_LOG_DDL = "CREATE TABLE IF NOT EXISTS \"nested_set_sync_log_offset\" (\n" +
             "\"log_table_name\" TEXT NOT NULL,\n" +
             "\"log_table_offset\" INTEGER NOT NULL,\n" +
             "PRIMARY KEY(\"log_table_name\"));";
+    private static Path dbPath;
 
     @BeforeAll
     public static void setUpClass() throws Exception {

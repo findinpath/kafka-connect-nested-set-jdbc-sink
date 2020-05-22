@@ -38,74 +38,72 @@ import java.util.List;
 import java.util.Map;
 
 public class NestedSetJdbcSinkConnector extends SinkConnector {
-  private static final Logger log = LoggerFactory
-			.getLogger(NestedSetJdbcSinkConnector.class);
+    private static final Logger log = LoggerFactory
+            .getLogger(NestedSetJdbcSinkConnector.class);
 
-  private Map<String, String> configProps;
+    private Map<String, String> configProps;
 
-  public Class<? extends Task> taskClass() {
-    return NestedSetJdbcSinkTask.class;
-  }
-
-  @Override
-  public List<Map<String, String>> taskConfigs(int maxTasks) {
-    log.info("Setting task configurations for {} workers.", maxTasks);
-    final List<Map<String, String>> configs = new ArrayList<>(maxTasks);
-    for (int i = 0; i < maxTasks; ++i) {
-      configs.add(configProps);
+    public Class<? extends Task> taskClass() {
+        return NestedSetJdbcSinkTask.class;
     }
-    return configs;
-  }
 
-  @Override
-  public void start(Map<String, String> props) {
-    configProps = props;
-    createLogOffsetTableIfNecessary();
-  }
-
-  @Override
-  public void stop() {
-  }
-
-  @Override
-  public ConfigDef config() {
-    return JdbcSinkConfig.CONFIG_DEF;
-  }
-
-  @Override
-  public Config validate(Map<String, String> connectorConfigs) {
-    return super.validate(connectorConfigs);
-  }
-
-  @Override
-  public String version() {
-    return Version.getVersion();
-  }
-
-  private void createLogOffsetTableIfNecessary() {
-    JdbcSinkConfig config = new JdbcSinkConfig(configProps);
-    try (DatabaseDialect dialect = getDatabaseDialect(config);
-         Connection connection = dialect.getConnection()) {
-      connection.setAutoCommit(false);
-      final DbStructure dbStructure = new DbStructure(dialect);
-      dbStructure.createLogOffsetTableIfNecessary(
-              config,
-              connection);
-
-      connection.commit();
-    } catch (SQLException sqle) {
-      throw new ConnectException(sqle);
+    @Override
+    public List<Map<String, String>> taskConfigs(int maxTasks) {
+        log.info("Setting task configurations for {} workers.", maxTasks);
+        final List<Map<String, String>> configs = new ArrayList<>(maxTasks);
+        for (int i = 0; i < maxTasks; ++i) {
+            configs.add(configProps);
+        }
+        return configs;
     }
-  }
 
-
-
-
-  private DatabaseDialect getDatabaseDialect(JdbcSinkConfig config){
-    if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
-      return DatabaseDialects.create(config.dialectName, config);
-    } else {
-      return DatabaseDialects.findBestFor(config.connectionUrl, config);
+    @Override
+    public void start(Map<String, String> props) {
+        configProps = props;
+        createLogOffsetTableIfNecessary();
     }
-  }
+
+    @Override
+    public void stop() {
+    }
+
+    @Override
+    public ConfigDef config() {
+        return JdbcSinkConfig.CONFIG_DEF;
+    }
+
+    @Override
+    public Config validate(Map<String, String> connectorConfigs) {
+        return super.validate(connectorConfigs);
+    }
+
+    @Override
+    public String version() {
+        return Version.getVersion();
+    }
+
+    private void createLogOffsetTableIfNecessary() {
+        JdbcSinkConfig config = new JdbcSinkConfig(configProps);
+        try (DatabaseDialect dialect = getDatabaseDialect(config);
+             Connection connection = dialect.getConnection()) {
+            connection.setAutoCommit(false);
+            final DbStructure dbStructure = new DbStructure(dialect);
+            dbStructure.createLogOffsetTableIfNecessary(
+                    config,
+                    connection);
+
+            connection.commit();
+        } catch (SQLException sqle) {
+            throw new ConnectException(sqle);
+        }
+    }
+
+
+    private DatabaseDialect getDatabaseDialect(JdbcSinkConfig config) {
+        if (config.dialectName != null && !config.dialectName.trim().isEmpty()) {
+            return DatabaseDialects.create(config.dialectName, config);
+        } else {
+            return DatabaseDialects.findBestFor(config.connectionUrl, config);
+        }
+    }
 }

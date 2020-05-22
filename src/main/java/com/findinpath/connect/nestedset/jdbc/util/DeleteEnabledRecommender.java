@@ -16,32 +16,33 @@
 package com.findinpath.connect.nestedset.jdbc.util;
 
 import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig;
+import org.apache.kafka.common.config.ConfigDef;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import org.apache.kafka.common.config.ConfigDef;
 
 public class DeleteEnabledRecommender implements ConfigDef.Recommender {
 
-  public static final DeleteEnabledRecommender INSTANCE = new DeleteEnabledRecommender();
+    public static final DeleteEnabledRecommender INSTANCE = new DeleteEnabledRecommender();
 
-  private static final List<Object> ALL_VALUES = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
-  private static final List<Object> DISABLED = Collections.singletonList(Boolean.FALSE);
+    private static final List<Object> ALL_VALUES = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
+    private static final List<Object> DISABLED = Collections.singletonList(Boolean.FALSE);
 
-  @Override
-  public List<Object> validValues(final String name, final Map<String, Object> parsedConfig) {
-    return isRecordKeyPKMode(parsedConfig) ? ALL_VALUES : DISABLED;
-  }
+    private static boolean isRecordKeyPKMode(final Map<String, Object> parsedConfig) {
+        return JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY.name()
+                .equalsIgnoreCase(String.valueOf(parsedConfig.get(JdbcSinkConfig.PK_MODE)));
+    }
 
-  @Override
-  public boolean visible(final String name, final Map<String, Object> parsedConfig) {
-    return isRecordKeyPKMode(parsedConfig);
-  }
+    @Override
+    public List<Object> validValues(final String name, final Map<String, Object> parsedConfig) {
+        return isRecordKeyPKMode(parsedConfig) ? ALL_VALUES : DISABLED;
+    }
 
-  private static boolean isRecordKeyPKMode(final Map<String, Object> parsedConfig) {
-    return JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY.name()
-        .equalsIgnoreCase(String.valueOf(parsedConfig.get(JdbcSinkConfig.PK_MODE)));
-  }
+    @Override
+    public boolean visible(final String name, final Map<String, Object> parsedConfig) {
+        return isRecordKeyPKMode(parsedConfig);
+    }
 
 }

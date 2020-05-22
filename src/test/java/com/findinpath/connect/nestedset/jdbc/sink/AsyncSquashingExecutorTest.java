@@ -83,7 +83,7 @@ public class AsyncSquashingExecutorTest {
 
             int expectedAmountOfEventsDispatchedToConsumer = 2;
             assertThat(eventsDispatchedToConsumer.get(), equalTo(expectedAmountOfEventsDispatchedToConsumer));
-        }finally {
+        } finally {
             executorService.shutdown();
         }
     }

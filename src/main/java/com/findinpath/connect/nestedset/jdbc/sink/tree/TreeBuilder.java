@@ -35,7 +35,7 @@ public final class TreeBuilder {
     private TreeBuilder() {
     }
 
-    public static <T extends  NestedSetNode> Optional<TreeNode<T>> buildTree(List<T> nestedSetNodes) {
+    public static <T extends NestedSetNode> Optional<TreeNode<T>> buildTree(List<T> nestedSetNodes) {
         if (!isValidNestedSet(nestedSetNodes)) return Optional.empty();
 
         Iterator<T> nestedSetNodeIterator = nestedSetNodes
@@ -63,7 +63,7 @@ public final class TreeBuilder {
         return Optional.of(root);
     }
 
-    private static <T extends  NestedSetNode> boolean isValidNestedSet(List<T> nestedSetNodes) {
+    private static <T extends NestedSetNode> boolean isValidNestedSet(List<T> nestedSetNodes) {
         if (nestedSetNodes == null || nestedSetNodes.isEmpty()) return false;
 
         Comparator<Integer> naturalOrdering = Integer::compareTo;
@@ -107,7 +107,7 @@ public final class TreeBuilder {
     }
 
 
-    private static <T extends  NestedSetNode> boolean isValid(T nestedSetNode) {
+    private static <T extends NestedSetNode> boolean isValid(T nestedSetNode) {
         return nestedSetNode.getLeft() < nestedSetNode.getRight();
     }
 

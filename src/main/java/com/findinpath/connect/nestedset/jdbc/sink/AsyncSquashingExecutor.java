@@ -44,7 +44,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *     <li>this thread would verify if there is a {@link  #enqueue(Runnable)} method call already enqueued, and if so it would complete the method call.</li>
  * </ul>
  */
-public class AsyncSquashingExecutor implements Executor{
+public class AsyncSquashingExecutor implements Executor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncSquashingExecutor.class);
 
     /**
@@ -59,7 +59,6 @@ public class AsyncSquashingExecutor implements Executor{
 
     /**
      * Constructor of the class.
-     *
      */
     public AsyncSquashingExecutor() {
         this.executorService = Executors.newFixedThreadPool(3);

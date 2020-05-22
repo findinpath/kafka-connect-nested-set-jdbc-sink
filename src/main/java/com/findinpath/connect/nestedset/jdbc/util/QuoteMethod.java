@@ -16,26 +16,26 @@
 package com.findinpath.connect.nestedset.jdbc.util;
 
 public enum QuoteMethod {
-  ALWAYS("always"),
-  NEVER("never");
+    ALWAYS("always"),
+    NEVER("never");
 
-  public static QuoteMethod get(String name) {
-    for (QuoteMethod method : values()) {
-      if (method.toString().equalsIgnoreCase(name)) {
-        return method;
-      }
+    private final String name;
+
+    QuoteMethod(String name) {
+        this.name = name;
     }
-    throw new IllegalArgumentException("No matching QuoteMethod found for '" + name + "'");
-  }
 
-  private final String name;
+    public static QuoteMethod get(String name) {
+        for (QuoteMethod method : values()) {
+            if (method.toString().equalsIgnoreCase(name)) {
+                return method;
+            }
+        }
+        throw new IllegalArgumentException("No matching QuoteMethod found for '" + name + "'");
+    }
 
-  QuoteMethod(String name) {
-    this.name = name;
-  }
-
-  @Override
-  public String toString() {
-    return name;
-  }
+    @Override
+    public String toString() {
+        return name;
+    }
 }

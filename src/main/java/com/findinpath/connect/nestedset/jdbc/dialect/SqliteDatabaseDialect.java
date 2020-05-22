@@ -38,136 +38,136 @@ import java.util.List;
  */
 public class SqliteDatabaseDialect extends GenericDatabaseDialect {
 
-  /**
-   * The provider for {@link SqliteDatabaseDialect}.
-   */
-  public static class Provider extends SubprotocolBasedProvider {
-    public Provider() {
-      super(SqliteDatabaseDialect.class.getSimpleName(), "sqlite");
+    /**
+     * Create a new dialect instance with the given connector configuration.
+     *
+     * @param config the connector configuration; may not be null
+     */
+    public SqliteDatabaseDialect(AbstractConfig config) {
+        super(config, new IdentifierRules(".", "`", "`"));
     }
 
     @Override
-    public DatabaseDialect create(AbstractConfig config) {
-      return new SqliteDatabaseDialect(config);
+    protected boolean includeTable(TableId table) {
+        // SQLite JDBC driver does not correctly mark these as system tables
+        return !table.tableName().startsWith("sqlite_");
     }
-  }
 
-  /**
-   * Create a new dialect instance with the given connector configuration.
-   *
-   * @param config the connector configuration; may not be null
-   */
-  public SqliteDatabaseDialect(AbstractConfig config) {
-    super(config, new IdentifierRules(".", "`", "`"));
-  }
-
-  @Override
-  protected boolean includeTable(TableId table) {
-    // SQLite JDBC driver does not correctly mark these as system tables
-    return !table.tableName().startsWith("sqlite_");
-  }
-
-  @Override
-  protected String getSqlType(SinkRecordField field) {
-    if (field.schemaName() != null) {
-      switch (field.schemaName()) {
-        case Decimal.LOGICAL_NAME:
-        case Date.LOGICAL_NAME:
-        case Time.LOGICAL_NAME:
-        case Timestamp.LOGICAL_NAME:
-          return "NUMERIC";
-        default:
-          // pass through to normal types
-      }
+    @Override
+    protected String getSqlType(SinkRecordField field) {
+        if (field.schemaName() != null) {
+            switch (field.schemaName()) {
+                case Decimal.LOGICAL_NAME:
+                case Date.LOGICAL_NAME:
+                case Time.LOGICAL_NAME:
+                case Timestamp.LOGICAL_NAME:
+                    return "NUMERIC";
+                default:
+                    // pass through to normal types
+            }
+        }
+        switch (field.schemaType()) {
+            case BOOLEAN:
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+                return "INTEGER";
+            case FLOAT32:
+            case FLOAT64:
+                return "REAL";
+            case STRING:
+                return "TEXT";
+            case BYTES:
+                return "BLOB";
+            default:
+                return super.getSqlType(field);
+        }
     }
-    switch (field.schemaType()) {
-      case BOOLEAN:
-      case INT8:
-      case INT16:
-      case INT32:
-      case INT64:
-        return "INTEGER";
-      case FLOAT32:
-      case FLOAT64:
-        return "REAL";
-      case STRING:
-        return "TEXT";
-      case BYTES:
-        return "BLOB";
-      default:
-        return super.getSqlType(field);
+
+    @Override
+    public List<String> buildCreateLogTableStatements(
+            TableId table,
+            String primaryKeyColumnName,
+            String operationTypeColumnName,
+            Collection<SinkRecordField> fields
+    ) {
+        ExpressionBuilder builder = expressionBuilder();
+
+        builder.append("CREATE TABLE ");
+        builder.append(table);
+        builder.append(" (");
+        builder.appendColumnName(primaryKeyColumnName);
+        builder.append(" ");
+        builder.append("INTEGER PRIMARY KEY AUTOINCREMENT,");
+        builder.appendColumnName(operationTypeColumnName);
+        builder.append(" ");
+        builder.append("INTEGER NOT NULL,");
+        writeNullableColumnsSpec(builder, fields);
+        builder.append(")");
+        return Arrays.asList(builder.toString());
     }
-  }
 
-  @Override
-  public List<String> buildCreateLogTableStatements(
-          TableId table,
-          String primaryKeyColumnName,
-          String operationTypeColumnName,
-          Collection<SinkRecordField> fields
-  ) {
-    ExpressionBuilder builder = expressionBuilder();
-
-    builder.append("CREATE TABLE ");
-    builder.append(table);
-    builder.append(" (");
-    builder.appendColumnName(primaryKeyColumnName);
-    builder.append(" ");
-    builder.append("INTEGER PRIMARY KEY AUTOINCREMENT,");
-    builder.appendColumnName(operationTypeColumnName);
-    builder.append(" ");
-    builder.append("INTEGER NOT NULL,");
-    writeNullableColumnsSpec(builder, fields);
-    builder.append(")");
-    return Arrays.asList(builder.toString());
-  }
-
-  @Override
-  public List<String> buildAlterTable(
-      TableId table,
-      Collection<SinkRecordField> fields
-  ) {
-    final List<String> queries = new ArrayList<>(fields.size());
-    for (SinkRecordField field : fields) {
-      queries.addAll(super.buildAlterTable(table, Collections.singleton(field)));
+    @Override
+    public List<String> buildAlterTable(
+            TableId table,
+            Collection<SinkRecordField> fields
+    ) {
+        final List<String> queries = new ArrayList<>(fields.size());
+        for (SinkRecordField field : fields) {
+            queries.addAll(super.buildAlterTable(table, Collections.singleton(field)));
+        }
+        return queries;
     }
-    return queries;
-  }
 
-  @Override
-  public List<String> buildAlterLogTable(
-          TableId table,
-          Collection<SinkRecordField> fields
-  ) {
-    final List<String> queries = new ArrayList<>(fields.size());
-    for (SinkRecordField field : fields) {
-      queries.addAll(super.buildAlterLogTable(table, Collections.singleton(field)));
+    @Override
+    public List<String> buildAlterLogTable(
+            TableId table,
+            Collection<SinkRecordField> fields
+    ) {
+        final List<String> queries = new ArrayList<>(fields.size());
+        for (SinkRecordField field : fields) {
+            queries.addAll(super.buildAlterLogTable(table, Collections.singleton(field)));
+        }
+        return queries;
     }
-    return queries;
-  }
 
-  @Override
-  public String buildUpsertQueryStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
-  ) {
-    ExpressionBuilder builder = expressionBuilder();
-    builder.append("INSERT OR REPLACE INTO ");
-    builder.append(table);
-    builder.append("(");
-    builder.appendList()
-           .delimitedBy(",")
-           .transformedBy(ExpressionBuilder.columnNames())
-           .of(keyColumns, nonKeyColumns);
-    builder.append(") VALUES(");
-    builder.appendMultiple(",", "?", keyColumns.size() + nonKeyColumns.size());
-    builder.append(")");
-    return builder.toString();
-  }
+    @Override
+    public String buildUpsertQueryStatement(
+            TableId table,
+            Collection<ColumnId> keyColumns,
+            Collection<ColumnId> nonKeyColumns
+    ) {
+        ExpressionBuilder builder = expressionBuilder();
+        builder.append("INSERT OR REPLACE INTO ");
+        builder.append(table);
+        builder.append("(");
+        builder.appendList()
+                .delimitedBy(",")
+                .transformedBy(ExpressionBuilder.columnNames())
+                .of(keyColumns, nonKeyColumns);
+        builder.append(") VALUES(");
+        builder.appendMultiple(",", "?", keyColumns.size() + nonKeyColumns.size());
+        builder.append(")");
+        return builder.toString();
+    }
 
-  @Override
-  protected String currentTimestampDatabaseQuery() {
-    return "SELECT strftime('%Y-%m-%d %H:%M:%S.%f','now')";
-  }
+    @Override
+    protected String currentTimestampDatabaseQuery() {
+        return "SELECT strftime('%Y-%m-%d %H:%M:%S.%f','now')";
+    }
+
+    /**
+     * The provider for {@link SqliteDatabaseDialect}.
+     */
+    public static class Provider extends SubprotocolBasedProvider {
+        public Provider() {
+            super(SqliteDatabaseDialect.class.getSimpleName(), "sqlite");
+        }
+
+        @Override
+        public DatabaseDialect create(AbstractConfig config) {
+            return new SqliteDatabaseDialect(config);
+        }
+    }
 }

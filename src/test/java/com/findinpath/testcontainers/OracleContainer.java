@@ -42,18 +42,6 @@ public class OracleContainer extends JdbcDatabaseContainer<OracleContainer> {
     private String username = "system";
     private String password = "oracle";
 
-    private static String resolveImageName() {
-        String image = TestcontainersConfiguration.getInstance()
-                .getProperties().getProperty("oracle.container.image");
-
-        if (image == null) {
-            throw new IllegalStateException("An image to use for Oracle containers must be configured. " +
-                    "To do this, please place a file on the classpath named `testcontainers.properties`, " +
-                    "containing `oracle.container.image=IMAGE`, where IMAGE is a suitable image name and tag.");
-        }
-        return image;
-    }
-
     public OracleContainer() {
         this(resolveImageName());
     }
@@ -66,6 +54,18 @@ public class OracleContainer extends JdbcDatabaseContainer<OracleContainer> {
     public OracleContainer(Future<String> dockerImageName) {
         super(dockerImageName);
         preconfigure();
+    }
+
+    private static String resolveImageName() {
+        String image = TestcontainersConfiguration.getInstance()
+                .getProperties().getProperty("oracle.container.image");
+
+        if (image == null) {
+            throw new IllegalStateException("An image to use for Oracle containers must be configured. " +
+                    "To do this, please place a file on the classpath named `testcontainers.properties`, " +
+                    "containing `oracle.container.image=IMAGE`, where IMAGE is a suitable image name and tag.");
+        }
+        return image;
     }
 
     private void preconfigure() {

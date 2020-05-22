@@ -24,6 +24,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TreeBuilderTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(TreeBuilderTest.class);
 
+    private static void print(TreeNode<SimpleNestedSetNode> treeNode, StringBuilder buffer, String prefix, String childrenPrefix) {
+        buffer.append(prefix);
+        buffer.append("|" + treeNode.getNestedSetNode().getLeft() + "|  |" + treeNode.getNestedSetNode().getRight() + "|");
+        buffer.append('\n');
+        if (treeNode.getChildren() != null && !treeNode.getChildren().isEmpty()) {
+            int nodeLeftDigitsCount = Integer.toString(treeNode.getNestedSetNode().getLeft()).length();
+            String leftPad = String.format("%1$" + (nodeLeftDigitsCount + 3) + "s", "");
+            for (Iterator<TreeNode<SimpleNestedSetNode>> it = treeNode.getChildren().iterator(); it.hasNext(); ) {
+                TreeNode<SimpleNestedSetNode> next = it.next();
+                if (it.hasNext()) {
+                    print(next, buffer,
+                            childrenPrefix + leftPad + "├── ",
+                            childrenPrefix + leftPad + "│   ");
+                } else {
+                    print(next, buffer,
+                            childrenPrefix + leftPad + "└── ",
+                            childrenPrefix + leftPad + "    ");
+                }
+            }
+        }
+    }
 
     @Test
     public void treeWithOneNodeAccuracy() {
@@ -76,7 +97,6 @@ public class TreeBuilderTest {
         assertThat(root.get(), equalTo(expectedRoot));
     }
 
-
     /**
      * Test the accuracy for modelling the following tree
      * <pre>
@@ -105,7 +125,7 @@ public class TreeBuilderTest {
         logTreeContent(foodTreeNode.get());
         TreeNode<SimpleNestedSetNode> expectedAppleTreeNode = new TreeNode<>(appleNestedSetNode);
         TreeNode<SimpleNestedSetNode> expectedBananaTreeNode = new TreeNode<>(bananaNestedSetNode);
-        TreeNode<SimpleNestedSetNode> expectedFruitTreeNode = new TreeNode<>(fruitNestedSetNode ,asList(expectedAppleTreeNode, expectedBananaTreeNode));
+        TreeNode<SimpleNestedSetNode> expectedFruitTreeNode = new TreeNode<>(fruitNestedSetNode, asList(expectedAppleTreeNode, expectedBananaTreeNode));
         TreeNode<SimpleNestedSetNode> expectedBeefTreeNode = new TreeNode<>(beefNestedSetNode);
         TreeNode<SimpleNestedSetNode> expectedMeatTreeNode = new TreeNode<>(meatNestedSetNode, asList(expectedBeefTreeNode));
         TreeNode<SimpleNestedSetNode> expectedFoodTreeNode = new TreeNode<>(foodNestedSetNode, asList(expectedFruitTreeNode, expectedMeatTreeNode));
@@ -130,6 +150,12 @@ public class TreeBuilderTest {
         SimpleNestedSetNode child2NestedSetNode = new SimpleNestedSetNode(4, 5);
         Optional<TreeNode<SimpleNestedSetNode>> root = buildTree(asList(child1NestedSetNode, rootNestedSetNode, child2NestedSetNode));
         assertFalse(root.isPresent());
+    }
+
+    private void logTreeContent(TreeNode<SimpleNestedSetNode> treeNode) {
+        StringBuilder sinkTreeRepresentation = new StringBuilder();
+        print(treeNode, sinkTreeRepresentation, "", "");
+        LOGGER.info("Tree representation: \n" + sinkTreeRepresentation.toString());
     }
 
     private static class SimpleNestedSetNode implements NestedSetNode {
@@ -163,35 +189,6 @@ public class TreeBuilderTest {
         @Override
         public int hashCode() {
             return Objects.hash(left, right);
-        }
-    }
-
-
-    private void logTreeContent(TreeNode<SimpleNestedSetNode> treeNode) {
-        StringBuilder sinkTreeRepresentation = new StringBuilder();
-        print(treeNode, sinkTreeRepresentation, "", "");
-        LOGGER.info("Tree representation: \n" + sinkTreeRepresentation.toString());
-    }
-
-    private static void print(TreeNode<SimpleNestedSetNode> treeNode, StringBuilder buffer, String prefix, String childrenPrefix) {
-        buffer.append(prefix);
-        buffer.append("|" + treeNode.getNestedSetNode().getLeft() + "|  |" + treeNode.getNestedSetNode().getRight() + "|");
-        buffer.append('\n');
-        if (treeNode.getChildren() != null && !treeNode.getChildren().isEmpty()) {
-            int nodeLeftDigitsCount = Integer.toString(treeNode.getNestedSetNode().getLeft()).length();
-            String leftPad = String.format("%1$" + (nodeLeftDigitsCount + 3) + "s", "");
-            for (Iterator<TreeNode<SimpleNestedSetNode>> it = treeNode.getChildren().iterator(); it.hasNext(); ) {
-                TreeNode<SimpleNestedSetNode> next = it.next();
-                if (it.hasNext()) {
-                    print(next, buffer,
-                            childrenPrefix + leftPad + "├── ",
-                            childrenPrefix + leftPad + "│   ");
-                } else {
-                    print(next, buffer,
-                            childrenPrefix + leftPad + "└── ",
-                            childrenPrefix + leftPad + "    ");
-                }
-            }
         }
     }
 }

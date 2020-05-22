@@ -57,8 +57,8 @@ public class KafkaConnectContainer extends GenericContainer<KafkaConnectContaine
     public static final String KEY_CONVERTER_SCHEMA_REGISTRY_URL_CONFIG = "CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL";
     public static final String VALUE_CONVERTER_CONFIG = "CONNECT_VALUE_CONVERTER";
     public static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL_CONFIG = "CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL";
-    private static final String AVRO_CONVERTER_PATTERN = "AvroConverter";
     public static final String PLUGIN_PATH_CONTAINER = "/usr/share/java";
+    private static final String AVRO_CONVERTER_PATTERN = "AvroConverter";
     private static final String GROUP_ID_DEFAULT_VALUE = "kafka-connect-group";
     private static final String OFFSET_STORAGE_FILE_FILENAME_DEFAULT_VALUE = "connect-offsets-file.txt";
     private static final String OFFSET_STORAGE_TOPIC_DEFAULT_VALUE = "connect-offsets";
@@ -321,7 +321,7 @@ public class KafkaConnectContainer extends GenericContainer<KafkaConnectContaine
             throw new IllegalArgumentException(format("Resource with path %s could not be found", pluginsPath.toString()));
         }
 
-        if (pluginsFile.isDirectory()){
+        if (pluginsFile.isDirectory()) {
             throw new IllegalArgumentException(format("Resource with path %s is a directory", pluginsPath.toString()));
         }
 

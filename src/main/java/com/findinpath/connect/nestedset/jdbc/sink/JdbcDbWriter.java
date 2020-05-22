@@ -27,65 +27,64 @@ import java.sql.SQLException;
 import java.util.Collection;
 
 public class JdbcDbWriter {
-  private static final Logger log = LoggerFactory
-			.getLogger(JdbcDbWriter.class);
+    private static final Logger log = LoggerFactory
+            .getLogger(JdbcDbWriter.class);
+    final NestedSetRecordsSynchronizer nestedSetRecordsSynchronizer;
+    final CachedConnectionProvider cachedConnectionProvider;
+    private final JdbcSinkConfig config;
+    private final DatabaseDialect dbDialect;
+    private final DbStructure dbStructure;
+    private final TableId tableId;
+    private final TableId logTableId;
 
-  private final JdbcSinkConfig config;
-  private final DatabaseDialect dbDialect;
-  private final DbStructure dbStructure;
-  private final TableId tableId;
-  private final TableId logTableId;
-  final NestedSetRecordsSynchronizer nestedSetRecordsSynchronizer;
-  final CachedConnectionProvider cachedConnectionProvider;
 
+    JdbcDbWriter(final JdbcSinkConfig config, DatabaseDialect dbDialect, DbStructure dbStructure) {
+        this.config = config;
+        this.dbDialect = dbDialect;
+        this.dbStructure = dbStructure;
 
-  JdbcDbWriter(final JdbcSinkConfig config, DatabaseDialect dbDialect, DbStructure dbStructure) {
-    this.config = config;
-    this.dbDialect = dbDialect;
-    this.dbStructure = dbStructure;
+        this.tableId = dbDialect.parseTableIdentifier(config.tableName);
+        this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
 
-    this.tableId = dbDialect.parseTableIdentifier(config.tableName);
-    this.logTableId = dbDialect.parseTableIdentifier(config.logTableName);
+        this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
+            @Override
+            protected void onConnect(Connection connection) throws SQLException {
+                log.info("JdbcDbWriter Connected");
+                connection.setAutoCommit(false);
+            }
+        };
 
-    this.cachedConnectionProvider = new CachedConnectionProvider(this.dbDialect) {
-      @Override
-      protected void onConnect(Connection connection) throws SQLException {
-        log.info("JdbcDbWriter Connected");
-        connection.setAutoCommit(false);
-      }
-    };
+        nestedSetRecordsSynchronizer = new NestedSetRecordsSynchronizer(config, dbDialect);
 
-    nestedSetRecordsSynchronizer = new NestedSetRecordsSynchronizer(config, dbDialect);
-
-  }
-
-  void write(final Collection<SinkRecord> records) throws SQLException {
-    final Connection connection = cachedConnectionProvider.getConnection();
-
-    try {
-      BufferedRecords buffer = new BufferedRecords(config, tableId,
-              logTableId, dbDialect,
-              dbStructure, connection);
-
-      for (SinkRecord record : records) {
-        buffer.add(record);
-      }
-
-      log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
-      buffer.flush();
-      buffer.close();
-
-      log.debug("Synchronizing pending nested set records");
-      nestedSetRecordsSynchronizer.synchronizeRecords(connection);
-
-      connection.commit();
-    }catch(SQLException e){
-      connection.rollback();
-      throw e;
     }
-  }
 
-  void closeQuietly() {
-    cachedConnectionProvider.close();
-  }
+    void write(final Collection<SinkRecord> records) throws SQLException {
+        final Connection connection = cachedConnectionProvider.getConnection();
+
+        try {
+            BufferedRecords buffer = new BufferedRecords(config, tableId,
+                    logTableId, dbDialect,
+                    dbStructure, connection);
+
+            for (SinkRecord record : records) {
+                buffer.add(record);
+            }
+
+            log.debug("Flushing records in JDBC Writer for table ID: {}", tableId);
+            buffer.flush();
+            buffer.close();
+
+            log.debug("Synchronizing pending nested set records");
+            nestedSetRecordsSynchronizer.synchronizeRecords(connection);
+
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        }
+    }
+
+    void closeQuietly() {
+        cachedConnectionProvider.close();
+    }
 }

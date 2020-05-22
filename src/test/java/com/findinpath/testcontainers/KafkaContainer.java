@@ -57,7 +57,7 @@ public class KafkaContainer extends GenericContainer<KafkaContainer> {
         env.put("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1");
         env.put("KAFKA_LISTENERS",
                 "PLAINTEXT://0.0.0.0:" + KAFKA_INTERNAL_ADVERTISED_LISTENERS_PORT +
-                ",PLAINTEXT_HOST://0.0.0.0:" + KAFKA_INTERNAL_PORT);
+                        ",PLAINTEXT_HOST://0.0.0.0:" + KAFKA_INTERNAL_PORT);
         env.put("KAFKA_ADVERTISED_LISTENERS",
                 "PLAINTEXT://" + networkAlias + ":" + KAFKA_INTERNAL_ADVERTISED_LISTENERS_PORT
                         + ",PLAINTEXT_HOST://" + getContainerIpAddress() + ":" + exposedPort);

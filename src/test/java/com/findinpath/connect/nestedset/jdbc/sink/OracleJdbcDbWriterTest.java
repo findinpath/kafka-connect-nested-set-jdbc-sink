@@ -50,7 +50,7 @@ public class OracleJdbcDbWriterTest extends JdbcDbWriterTest {
     protected void dropTableIfExists(String tableName) throws SQLException {
         try {
             jdbcHelper.execute("DROP TABLE " + tableName);
-        }catch(SQLException e){
+        } catch (SQLException e) {
             // swallow eventual exceptions when the table doesn't exists
         }
     }

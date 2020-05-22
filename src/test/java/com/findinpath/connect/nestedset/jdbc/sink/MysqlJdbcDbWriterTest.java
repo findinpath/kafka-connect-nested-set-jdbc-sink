@@ -18,7 +18,6 @@
 package com.findinpath.connect.nestedset.jdbc.sink;
 
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 

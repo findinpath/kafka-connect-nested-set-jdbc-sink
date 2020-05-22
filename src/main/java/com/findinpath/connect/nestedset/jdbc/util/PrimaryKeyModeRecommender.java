@@ -16,33 +16,34 @@
 package com.findinpath.connect.nestedset.jdbc.util;
 
 import com.findinpath.connect.nestedset.jdbc.sink.JdbcSinkConfig;
+import org.apache.kafka.common.config.ConfigDef;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.apache.kafka.common.config.ConfigDef;
 
 public class PrimaryKeyModeRecommender implements ConfigDef.Recommender {
 
-  public static final PrimaryKeyModeRecommender INSTANCE = new PrimaryKeyModeRecommender();
+    public static final PrimaryKeyModeRecommender INSTANCE = new PrimaryKeyModeRecommender();
 
-  private static final List<Object> ALL_VALUES =
-      Arrays.stream(JdbcSinkConfig.PrimaryKeyMode.values())
-          .map(mode -> mode.name().toLowerCase())
-          .collect(Collectors.toList());
-  private static final List<Object> RECORD_KEY_ONLY =
-      Collections.singletonList(JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY.name().toLowerCase());
+    private static final List<Object> ALL_VALUES =
+            Arrays.stream(JdbcSinkConfig.PrimaryKeyMode.values())
+                    .map(mode -> mode.name().toLowerCase())
+                    .collect(Collectors.toList());
+    private static final List<Object> RECORD_KEY_ONLY =
+            Collections.singletonList(JdbcSinkConfig.PrimaryKeyMode.RECORD_KEY.name().toLowerCase());
 
-  @Override
-  public List<Object> validValues(final String name, final Map<String, Object> parsedConfig) {
-    final boolean deleteEnabled = (Boolean) parsedConfig.getOrDefault(JdbcSinkConfig.DELETE_ENABLED, false);
-    return deleteEnabled ? RECORD_KEY_ONLY : ALL_VALUES;
-  }
+    @Override
+    public List<Object> validValues(final String name, final Map<String, Object> parsedConfig) {
+        final boolean deleteEnabled = (Boolean) parsedConfig.getOrDefault(JdbcSinkConfig.DELETE_ENABLED, false);
+        return deleteEnabled ? RECORD_KEY_ONLY : ALL_VALUES;
+    }
 
-  @Override
-  public boolean visible(final String name, final Map<String, Object> parsedConfig) {
-    return true;
-  }
+    @Override
+    public boolean visible(final String name, final Map<String, Object> parsedConfig) {
+        return true;
+    }
 
 }

@@ -97,6 +97,48 @@ public class NestedSetRecordsSynchronizer {
         nestedSetTableQuerier = new BulkTableQuerier(dbDialect, tableId);
     }
 
+    private static boolean isValidNestedSetNode(List<Object> nestedSetRecordValues,
+                                                Function<List<Object>, Integer> getNestedSetRecordLeftValue,
+                                                Function<List<Object>, Integer> getNestedSetRecordRightValue
+    ) {
+        Integer left = getNestedSetRecordLeftValue.apply(nestedSetRecordValues);
+        Integer right = getNestedSetRecordRightValue.apply(nestedSetRecordValues);
+
+        return left != null && right != null && left < right;
+    }
+
+    private static Object getColumnValue(List<Object> recordValues, int index) {
+        return recordValues.get(index);
+    }
+
+    private static Long getColumnValueAsLong(List<Object> recordValues, int index) {
+        Number number = ((Number) recordValues.get(index));
+        return number == null ? null : number.longValue();
+    }
+
+    private static Integer getColumnValueAsInteger(List<Object> recordValues, int index) {
+        Number number = ((Number) recordValues.get(index));
+        return number == null ? null : number.intValue();
+    }
+
+    /**
+     * Returns the column number of the column with the given name in the
+     * result set metadata columns.
+     *
+     * @param name a <code>String</code> object that is the name of a column in
+     *             the result set metadata columns.
+     */
+    private static int getColIdxByName(String name, List<String> columnNames, TableId tableId) throws SQLException {
+
+        for (int i = 0; i < columnNames.size(); ++i) {
+            String colName = columnNames.get(i);
+            if (colName != null)
+                if (name.equalsIgnoreCase(colName))
+                    return i;
+        }
+        throw new SQLException("The table " + tableId + " doesn't contain the expected column " + name);
+    }
+
     public void synchronizeRecords(Connection connection) throws SQLException {
 
         // get nested set log entries
@@ -113,14 +155,14 @@ public class NestedSetRecordsSynchronizer {
         int logTableOperationTypeColumnIndex = getColIdxByName(logTableOperationTypeColumnName,
                 nestedSetLogTableUpdates.getColumnNames(), logTableId);
         List<Integer> logTableNestedSetNodeIdColumnIndexes = new ArrayList<>();
-        for (String columnName : pkFields){
+        for (String columnName : pkFields) {
             int columnIndex = getColIdxByName(columnName, nestedSetLogTableUpdates.getColumnNames(), logTableId);
             logTableNestedSetNodeIdColumnIndexes.add(columnIndex);
         }
         int logTableNestedSetNodeLeftColumnIndex = getColIdxByName(tableLeftColumnName,
-                nestedSetLogTableUpdates.getColumnNames(),logTableId);
+                nestedSetLogTableUpdates.getColumnNames(), logTableId);
         int logTableNestedSetNodeRightColumnIndex = getColIdxByName(tableRightColumnName,
-                nestedSetLogTableUpdates.getColumnNames(),logTableId);
+                nestedSetLogTableUpdates.getColumnNames(), logTableId);
 
         Function<List<Object>, Long> getLogTableRecordId = recordValues ->
                 getColumnValueAsLong(recordValues, logTablePrimaryKeyColumnIndex);
@@ -150,12 +192,12 @@ public class NestedSetRecordsSynchronizer {
         ResultSetRecords nestedSetTableRecords = nestedSetTableQuerier.extractRecords(connection);
 
         List<Integer> tablePrimaryKeyColumnIndexes = new ArrayList<>();
-        for (String columnName : pkFields){
-            int columnIndex = getColIdxByName(columnName, nestedSetTableRecords.getColumnNames(),tableId);
+        for (String columnName : pkFields) {
+            int columnIndex = getColIdxByName(columnName, nestedSetTableRecords.getColumnNames(), tableId);
             tablePrimaryKeyColumnIndexes.add(columnIndex);
         }
-        int tableLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetTableRecords.getColumnNames(),tableId);
-        int tableRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetTableRecords.getColumnNames(),tableId);
+        int tableLeftColumnIndex = getColIdxByName(tableLeftColumnName, nestedSetTableRecords.getColumnNames(), tableId);
+        int tableRightColumnIndex = getColIdxByName(tableRightColumnName, nestedSetTableRecords.getColumnNames(), tableId);
         Function<List<Object>, NestedSetNodeId> getTableNestedSetNodeId = recordValues ->
                 new NestedSetNodeId(tablePrimaryKeyColumnIndexes
                         .stream()
@@ -208,8 +250,8 @@ public class NestedSetRecordsSynchronizer {
                     deletedNestedSetRecordsSortedByLogId,
                     latestNestedSetLogTableRecordId
             );
-        } else{
-            log.info("The pending entries from "+logTableId + " can't be synchronized because the resulting structure is not a nested set");
+        } else {
+            log.info("The pending entries from " + logTableId + " can't be synchronized because the resulting structure is not a nested set");
         }
     }
 
@@ -229,15 +271,15 @@ public class NestedSetRecordsSynchronizer {
     }
 
     private boolean isValidNestedSetLogNodeContent(List<List<Object>> recordsValues,
-                                                TableId tableId,
-                                                Function<List<Object>, Long> getTableRecordId,
-                                                Function<List<Object>, Integer> getLogTableOperationType,
-                                                Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
-                                                Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
+                                                   TableId tableId,
+                                                   Function<List<Object>, Long> getTableRecordId,
+                                                   Function<List<Object>, Integer> getLogTableOperationType,
+                                                   Function<List<Object>, Integer> getLogTableRecordNestedSetNodeLeft,
+                                                   Function<List<Object>, Integer> getLogTableRecordNestedSetNodeRight) {
         boolean invalidNestedSetTableRecordsFound = false;
         for (List<Object> recordValues : recordsValues) {
             int operationType = getLogTableOperationType.apply(recordValues);
-            if (OperationType.DELETE.ordinal() == operationType){
+            if (OperationType.DELETE.ordinal() == operationType) {
                 continue;
             }
             Long id = getTableRecordId.apply(recordValues);
@@ -410,7 +452,7 @@ public class NestedSetRecordsSynchronizer {
                         stmt.setObject(parameterIndex++, nestedSetLogTableRecordValues.get(i));
                     }
                 }
-                for (int nestedSetNodeIdColumnIndex : logTableNestedSetNodeIdColumnIndexes){
+                for (int nestedSetNodeIdColumnIndex : logTableNestedSetNodeIdColumnIndexes) {
                     stmt.setObject(parameterIndex++, nestedSetLogTableRecordValues.get(nestedSetNodeIdColumnIndex));
                 }
 
@@ -420,7 +462,6 @@ public class NestedSetRecordsSynchronizer {
             stmt.executeBatch();
         }
     }
-
 
     private void deleteFromNestedSetTable(Connection connection,
                                           List<Integer> logTableNestedSetNodeIdColumnIndexes,
@@ -499,49 +540,6 @@ public class NestedSetRecordsSynchronizer {
         return new ArrayList<>(nestedSetNodeId2NestedSetNodeMap.values());
     }
 
-    private static boolean isValidNestedSetNode(List<Object> nestedSetRecordValues,
-                                                Function<List<Object>, Integer> getNestedSetRecordLeftValue,
-                                                Function<List<Object>, Integer> getNestedSetRecordRightValue
-    ) {
-        Integer left = getNestedSetRecordLeftValue.apply(nestedSetRecordValues);
-        Integer right = getNestedSetRecordRightValue.apply(nestedSetRecordValues);
-
-        return left != null && right != null && left < right;
-    }
-
-    private static Object getColumnValue(List<Object> recordValues, int index) {
-        return recordValues.get(index);
-    }
-
-    private static Long getColumnValueAsLong(List<Object> recordValues, int index) {
-        Number number = ((Number) recordValues.get(index));
-        return number == null ? null : number.longValue();
-    }
-
-    private static Integer getColumnValueAsInteger(List<Object> recordValues, int index) {
-        Number number = ((Number) recordValues.get(index));
-        return number == null ? null : number.intValue();
-    }
-
-    /**
-     * Returns the column number of the column with the given name in the
-     * result set metadata columns.
-     *
-     * @param name a <code>String</code> object that is the name of a column in
-     *             the result set metadata columns.
-     */
-    private static int getColIdxByName(String name, List<String> columnNames, TableId tableId) throws SQLException {
-
-        for (int i = 0; i < columnNames.size(); ++i) {
-            String colName = columnNames.get(i);
-            if (colName != null)
-                if (name.equalsIgnoreCase(colName))
-                    return i;
-        }
-        throw new SQLException("The table " + tableId + " doesn't contain the expected column " + name);
-    }
-
-
     private static class NestedSetNodeId {
         final Object[] pkValues;
 
@@ -570,7 +568,7 @@ public class NestedSetRecordsSynchronizer {
         public String toString() {
             return "NestedSetRecordId{" +
                     Arrays.stream(pkValues)
-                            .map(value -> value==null ? "null" : value.toString() )
+                            .map(value -> value == null ? "null" : value.toString())
                             .collect(Collectors.joining(", ")) +
                     '}';
         }

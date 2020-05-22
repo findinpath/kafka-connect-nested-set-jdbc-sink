@@ -18,7 +18,8 @@
 package com.findinpath.connect.nestedset.jdbc;
 
 public class Utils {
-    private Utils(){}
+    private Utils() {
+    }
 
     public static <E extends Throwable> void sneakyThrow(Throwable e) throws E {
         throw (E) e;

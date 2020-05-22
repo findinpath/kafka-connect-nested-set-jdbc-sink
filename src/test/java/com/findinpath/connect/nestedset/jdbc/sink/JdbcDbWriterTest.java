@@ -93,7 +93,7 @@ public abstract class JdbcDbWriterTest {
 
     protected JdbcDbWriter createJdbcDbWriter(boolean autoCreate,
                                               boolean autoEvolve) {
-        return createJdbcDbWriter(autoCreate,autoEvolve,false);
+        return createJdbcDbWriter(autoCreate, autoEvolve, false);
     }
 
 
@@ -106,7 +106,7 @@ public abstract class JdbcDbWriterTest {
         props.put(AUTO_EVOLVE, String.valueOf(autoEvolve));
         props.put(DELETE_ENABLED, String.valueOf(deleteEnabled));
         props.put(PK_FIELDS, Arrays.asList(TABLE_PRIMARY_KEY_COLUMN_NAME_DEFAULT));
-        if (deleteEnabled){
+        if (deleteEnabled) {
             props.put(PK_MODE, String.valueOf(RECORD_KEY));
         }
         props.put(TABLE_NAME, NESTED_SET_TABLE_NAME);
@@ -318,8 +318,7 @@ public abstract class JdbcDbWriterTest {
         DatabaseDialect dialect = DatabaseDialects.findBestFor(config.connectionUrl, config);
         final DbStructure dbStructure = new DbStructure(dialect);
 
-        JdbcDbWriter jdbcDbWriter= new JdbcDbWriter(config, dialect, dbStructure);
-
+        JdbcDbWriter jdbcDbWriter = new JdbcDbWriter(config, dialect, dbStructure);
 
 
         Schema valueSchema = SchemaBuilder.struct()
@@ -364,7 +363,7 @@ public abstract class JdbcDbWriterTest {
 
         assertThat(
                 jdbcHelper.select("select label from " + NESTED_SET_TABLE_NAME + " where " + nodeIdFieldName + " = " +
-                                nodeId + " and "+ treeFieldName + " = "+ treeId,
+                                nodeId + " and " + treeFieldName + " = " + treeId,
                         rs -> {
                             assertThat(rs.getString(1), equalTo("Updated Root Label"));
                         }),
@@ -403,7 +402,7 @@ public abstract class JdbcDbWriterTest {
         assertOffsetAccuracyForSynchronizedRecords();
     }
 
-    protected void dropTableIfExists(String tableName) throws  SQLException{
+    protected void dropTableIfExists(String tableName) throws SQLException {
         jdbcHelper.execute("DROP TABLE IF EXISTS " + tableName);
     }
 

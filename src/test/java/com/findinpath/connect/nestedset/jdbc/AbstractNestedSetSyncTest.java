@@ -19,14 +19,12 @@ package com.findinpath.connect.nestedset.jdbc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.findinpath.connect.nestedset.jdbc.util.ConnectionProvider;
 import com.findinpath.connect.nestedset.jdbc.util.Version;
+import com.findinpath.kafka.connect.model.ConnectorConfiguration;
 import com.findinpath.testcontainers.KafkaConnectContainer;
 import com.findinpath.testcontainers.KafkaContainer;
 import com.findinpath.testcontainers.SchemaRegistryContainer;
 import com.findinpath.testcontainers.ZookeeperContainer;
-import com.findinpath.kafka.connect.model.ConnectorConfiguration;
 import io.restassured.http.ContentType;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeAll;
@@ -74,30 +72,23 @@ import static java.lang.String.format;
  */
 public abstract class AbstractNestedSetSyncTest {
 
-    private static final String KAFKA_CONNECT_CONNECTOR_NAME = "findinpath";
-    private static final String NESTED_SET_NODE_SOURCE_TABLE_NAME = "nested_set_node";
-
-
-    private static final String NESTED_SET_NODE_SINK_TABLE_NAME = "nested_set_node";
-    private static final String NESTED_SET_NODE_SINK_LOG_TABLE_NAME = "nested_set_node_log";
-    private static final String NESTED_SET_NODE_SINK_LOG_OFFSET_TABLE_NAME = "nested_set_node_log_offset";
-
-    private static final String POSTGRES_DB_DRIVER_CLASS_NAME = "org.postgresql.Driver";
-
     protected static final String POSTGRES_SOURCE_DB_NAME = "source";
     protected static final String POSTGRES_SOURCE_NETWORK_ALIAS = "source";
     protected static final String POSTGRES_SOURCE_DB_USERNAME = "sa";
     protected static final String POSTGRES_SOURCE_DB_PASSWORD = "p@ssw0rd!source";
     protected static final int POSTGRES_INTERNAL_PORT = 5432;
-
-    private static final String TRUNCATE_SOURCE_NESTED_SET_NODE_SQL =
-            "TRUNCATE nested_set_node";
-
     protected static final String POSTGRES_SINK_DB_NAME = "sink";
     protected static final String POSTGRES_SINK_NETWORK_ALIAS = "sink";
     protected static final String POSTGRES_SINK_DB_USERNAME = "sa";
     protected static final String POSTGRES_SINK_DB_PASSWORD = "p@ssw0rd!sink";
-
+    private static final String KAFKA_CONNECT_CONNECTOR_NAME = "findinpath";
+    private static final String NESTED_SET_NODE_SOURCE_TABLE_NAME = "nested_set_node";
+    private static final String NESTED_SET_NODE_SINK_TABLE_NAME = "nested_set_node";
+    private static final String NESTED_SET_NODE_SINK_LOG_TABLE_NAME = "nested_set_node_log";
+    private static final String NESTED_SET_NODE_SINK_LOG_OFFSET_TABLE_NAME = "nested_set_node_log_offset";
+    private static final String POSTGRES_DB_DRIVER_CLASS_NAME = "org.postgresql.Driver";
+    private static final String TRUNCATE_SOURCE_NESTED_SET_NODE_SQL =
+            "TRUNCATE nested_set_node";
     private static final String TRUNCATE_SINK_NESTED_SET_NODE_SQL =
             "TRUNCATE nested_set_node";
 
@@ -119,9 +110,7 @@ public abstract class AbstractNestedSetSyncTest {
             POSTGRES_SINK_NETWORK_ALIAS,
             POSTGRES_INTERNAL_PORT,
             POSTGRES_SINK_DB_NAME);
-
-    private static Network network;
-
+    private static final ObjectMapper mapper = new ObjectMapper();
     protected static ZookeeperContainer zookeeperContainer;
     protected static KafkaContainer kafkaContainer;
     protected static SchemaRegistryContainer schemaRegistryContainer;
@@ -129,9 +118,7 @@ public abstract class AbstractNestedSetSyncTest {
 
     protected static PostgreSQLContainer sourcePostgreSQLContainer;
     protected static PostgreSQLContainer sinkPostgreSQLContainer;
-
-    private static final ObjectMapper mapper = new ObjectMapper();
-
+    private static Network network;
     protected Supplier<Connection> sourceConnectionProvider;
     protected Supplier<Connection> sinkConnectionProvider;
 
@@ -162,7 +149,7 @@ public abstract class AbstractNestedSetSyncTest {
                 .withNetwork(network);
         kafkaConnectContainer = new KafkaConnectContainer(kafkaContainer.getInternalBootstrapServersUrl())
                 .withNetwork(network)
-                .withPlugin(Paths.get("target/kafka-connect-nested-set-jdbc-sink-"+ Version.getVersion() +".jar"), PLUGIN_PATH_CONTAINER+"/kafka-connect-jdbc")
+                .withPlugin(Paths.get("target/kafka-connect-nested-set-jdbc-sink-" + Version.getVersion() + ".jar"), PLUGIN_PATH_CONTAINER + "/kafka-connect-jdbc")
                 .withKeyConverter("org.apache.kafka.connect.storage.StringConverter")
                 .withValueConverter("io.confluent.connect.avro.AvroConverter")
                 .withSchemaRegistryUrl(schemaRegistryContainer.getInternalUrl());
@@ -196,29 +183,6 @@ public abstract class AbstractNestedSetSyncTest {
                 .join();
 
         verifyKafkaConnectHealth();
-    }
-
-    protected void setup() throws Exception{
-        sourceConnectionProvider = () -> getConnection(sourcePostgreSQLContainer.getJdbcUrl(), POSTGRES_SOURCE_DB_USERNAME, POSTGRES_SOURCE_DB_PASSWORD);
-        sinkConnectionProvider = () -> getConnection(sinkPostgreSQLContainer.getJdbcUrl(), POSTGRES_SINK_DB_USERNAME, POSTGRES_SINK_DB_PASSWORD);
-
-        truncateSourceTables();
-        truncateSinkTables();
-
-        testUuid = UUID.randomUUID().toString();
-
-        setupKakfaConnectJdbcNestedSetNodeSourceTableConnector(testUuid);
-        setupKakfaConnectJdbcNestedSetNodeSinkConnector(testUuid);
-    }
-
-
-    protected void tearDown() {
-        deleteKakfaConnectJdbcNestedSetNodeSourceConnector(testUuid);
-        deleteKakfaConnectJdbcNestedSetNodeSinkConnector(testUuid);
-    }
-
-    protected String getKafkaConnectOutputTopic() {
-        return getKafkaConnectOutputTopicPrefix(testUuid) + NESTED_SET_NODE_SOURCE_TABLE_NAME;
     }
 
     private static void setupKakfaConnectJdbcNestedSetNodeSourceTableConnector(String testUuid) {
@@ -293,11 +257,11 @@ public abstract class AbstractNestedSetSyncTest {
     }
 
     private static String getKafkaConnectorSourceName(String suffix) {
-        return KAFKA_CONNECT_CONNECTOR_NAME + "-source-"  + suffix;
+        return KAFKA_CONNECT_CONNECTOR_NAME + "-source-" + suffix;
     }
 
     private static String getKafkaConnectorSinkName(String suffix) {
-        return KAFKA_CONNECT_CONNECTOR_NAME + "-sink-"  + suffix;
+        return KAFKA_CONNECT_CONNECTOR_NAME + "-sink-" + suffix;
     }
 
     private static String getKafkaConnectOutputTopicPrefix(String extraPrefix) {
@@ -341,7 +305,6 @@ public abstract class AbstractNestedSetSyncTest {
                 .statusCode(HttpStatus.SC_OK);
     }
 
-
     private static Connection getConnection(String jdbcUrl, String username, String password) {
         Properties properties = new Properties();
         if (username != null) {
@@ -352,19 +315,41 @@ public abstract class AbstractNestedSetSyncTest {
         }
         try {
             return DriverManager.getConnection(jdbcUrl, properties);
-        }catch(SQLException e){
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void truncateSourceTables() throws SQLException{
+    protected void setup() throws Exception {
+        sourceConnectionProvider = () -> getConnection(sourcePostgreSQLContainer.getJdbcUrl(), POSTGRES_SOURCE_DB_USERNAME, POSTGRES_SOURCE_DB_PASSWORD);
+        sinkConnectionProvider = () -> getConnection(sinkPostgreSQLContainer.getJdbcUrl(), POSTGRES_SINK_DB_USERNAME, POSTGRES_SINK_DB_PASSWORD);
+
+        truncateSourceTables();
+        truncateSinkTables();
+
+        testUuid = UUID.randomUUID().toString();
+
+        setupKakfaConnectJdbcNestedSetNodeSourceTableConnector(testUuid);
+        setupKakfaConnectJdbcNestedSetNodeSinkConnector(testUuid);
+    }
+
+    protected void tearDown() {
+        deleteKakfaConnectJdbcNestedSetNodeSourceConnector(testUuid);
+        deleteKakfaConnectJdbcNestedSetNodeSinkConnector(testUuid);
+    }
+
+    protected String getKafkaConnectOutputTopic() {
+        return getKafkaConnectOutputTopicPrefix(testUuid) + NESTED_SET_NODE_SOURCE_TABLE_NAME;
+    }
+
+    private void truncateSourceTables() throws SQLException {
         try (Connection connection = sourceConnectionProvider.get();
              PreparedStatement pstmt = connection.prepareStatement(TRUNCATE_SOURCE_NESTED_SET_NODE_SQL)) {
             pstmt.executeUpdate();
         }
     }
 
-    private void truncateSinkTables() throws SQLException{
+    private void truncateSinkTables() throws SQLException {
         try (Connection connection = sinkConnectionProvider.get();
              PreparedStatement pstmtNestedSetNode = connection.prepareStatement(TRUNCATE_SINK_NESTED_SET_NODE_SQL);
              PreparedStatement pstmtNestedSetNodeLog = connection.prepareStatement(TRUNCATE_SINK_NESTED_SET_NODE_LOG_SQL);

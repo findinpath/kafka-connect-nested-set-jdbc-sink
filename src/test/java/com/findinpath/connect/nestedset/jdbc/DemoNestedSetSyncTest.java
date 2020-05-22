@@ -61,7 +61,7 @@ import static org.awaitility.Awaitility.await;
  *
  * @see {@link AbstractNestedSetSyncTest}
  */
-public class DemoNestedSetSyncTest extends  AbstractNestedSetSyncTest {
+public class DemoNestedSetSyncTest extends AbstractNestedSetSyncTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoNestedSetSyncTest.class);
 
@@ -70,8 +70,40 @@ public class DemoNestedSetSyncTest extends  AbstractNestedSetSyncTest {
 
     private SourceNestedSetNodeService sourceNestedSetNodeService;
 
+    private static void print(TreeNode<SinkNestedSetNode> treeNode, StringBuilder buffer, String prefix, String childrenPrefix) {
+        buffer.append(prefix);
+        buffer.append("|" + treeNode.getNestedSetNode().getLeft() + "| " + treeNode.getNestedSetNode().getLabel() + " |" + treeNode.getNestedSetNode().getRight() + "|");
+        buffer.append('\n');
+        if (treeNode.getChildren() != null && !treeNode.getChildren().isEmpty()) {
+            int nodeLeftDigitsCount = Integer.toString(treeNode.getNestedSetNode().getLeft()).length();
+            String leftPad = String.format("%1$" + (nodeLeftDigitsCount + 3) + "s", "");
+            for (Iterator<TreeNode<SinkNestedSetNode>> it = treeNode.getChildren().iterator(); it.hasNext(); ) {
+                TreeNode<SinkNestedSetNode> next = it.next();
+                if (it.hasNext()) {
+                    print(next, buffer,
+                            childrenPrefix + leftPad + "├── ",
+                            childrenPrefix + leftPad + "│   ");
+                } else {
+                    print(next, buffer,
+                            childrenPrefix + leftPad + "└── ",
+                            childrenPrefix + leftPad + "    ");
+                }
+            }
+        }
+    }
+
+    private static boolean assertEquality(SourceNestedSetNode sourceNestedSetNode,
+                                          SinkNestedSetNode sinkNestedSetNode) {
+        return Objects.equals(sourceNestedSetNode.getId(), sinkNestedSetNode.getId())
+                && Objects.equals(sourceNestedSetNode.getLabel(), sinkNestedSetNode.getLabel())
+                && Objects.equals(sourceNestedSetNode.getLeft(), sinkNestedSetNode.getLeft())
+                && Objects.equals(sourceNestedSetNode.getRight(), sinkNestedSetNode.getRight())
+                && Objects.equals(sourceNestedSetNode.getCreated(), sinkNestedSetNode.getCreated())
+                && Objects.equals(sourceNestedSetNode.getUpdated(), sinkNestedSetNode.getUpdated());
+    }
+
     @BeforeEach
-    public void setup() throws Exception{
+    public void setup() throws Exception {
         super.setup();
 
         sourceNestedSetNodeService = new SourceNestedSetNodeService(sourceConnectionProvider);
@@ -84,7 +116,6 @@ public class DemoNestedSetSyncTest extends  AbstractNestedSetSyncTest {
     public void tearDown() {
         super.tearDown();
     }
-
 
     /**
      * This test ensures the sync accuracy for the following simple tree:
@@ -145,7 +176,6 @@ public class DemoNestedSetSyncTest extends  AbstractNestedSetSyncTest {
         awaitForTheSyncOfTheNode(foodNodeId);
         logSinkTreeContent();
     }
-
 
     /**
      * This test makes sure that the syncing between source and sink
@@ -215,37 +245,5 @@ public class DemoNestedSetSyncTest extends  AbstractNestedSetSyncTest {
         StringBuilder sinkTreeRepresentation = new StringBuilder();
         print(sinkNestedSetRootNode, sinkTreeRepresentation, "", "");
         LOGGER.info("Sink nested set node current configuration: \n" + sinkTreeRepresentation.toString());
-    }
-
-    private static void print(TreeNode<SinkNestedSetNode> treeNode, StringBuilder buffer, String prefix, String childrenPrefix) {
-        buffer.append(prefix);
-        buffer.append("|" + treeNode.getNestedSetNode().getLeft() + "| " + treeNode.getNestedSetNode().getLabel() + " |" + treeNode.getNestedSetNode().getRight() + "|");
-        buffer.append('\n');
-        if (treeNode.getChildren() != null && !treeNode.getChildren().isEmpty()) {
-            int nodeLeftDigitsCount = Integer.toString(treeNode.getNestedSetNode().getLeft()).length();
-            String leftPad = String.format("%1$" + (nodeLeftDigitsCount + 3) + "s", "");
-            for (Iterator<TreeNode<SinkNestedSetNode>> it = treeNode.getChildren().iterator(); it.hasNext(); ) {
-                TreeNode<SinkNestedSetNode> next = it.next();
-                if (it.hasNext()) {
-                    print(next, buffer,
-                            childrenPrefix + leftPad + "├── ",
-                            childrenPrefix + leftPad + "│   ");
-                } else {
-                    print(next, buffer,
-                            childrenPrefix + leftPad + "└── ",
-                            childrenPrefix + leftPad + "    ");
-                }
-            }
-        }
-    }
-
-    private static boolean assertEquality(SourceNestedSetNode sourceNestedSetNode,
-                                          SinkNestedSetNode sinkNestedSetNode) {
-        return Objects.equals(sourceNestedSetNode.getId(), sinkNestedSetNode.getId())
-                && Objects.equals(sourceNestedSetNode.getLabel(), sinkNestedSetNode.getLabel())
-                && Objects.equals(sourceNestedSetNode.getLeft(), sinkNestedSetNode.getLeft())
-                && Objects.equals(sourceNestedSetNode.getRight(), sinkNestedSetNode.getRight())
-                && Objects.equals(sourceNestedSetNode.getCreated(), sinkNestedSetNode.getCreated())
-                && Objects.equals(sourceNestedSetNode.getUpdated(), sinkNestedSetNode.getUpdated());
     }
 }
