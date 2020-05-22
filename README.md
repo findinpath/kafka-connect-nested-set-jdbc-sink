@@ -4,8 +4,8 @@
 
 Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
-Kafka Connect Nested Set JDBC Sink Connector
-===========================================
+JDBC Nested Set Sink Connector for Kafka Connect
+================================================
 
 This is a [Kafka Connector](http://kafka.apache.org/documentation.html#connect)
 for loading [nested set model](https://en.wikipedia.org/wiki/Nested_set_model) to any JDBC compatible database.
