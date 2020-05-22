@@ -13,7 +13,6 @@
       <directory>${project.basedir}</directory>
       <outputDirectory>doc</outputDirectory>
       <includes>
-        <include>version.txt</include>
         <include>README*</include>
         <include>LICENSE*</include>
         <include>NOTICE*</include>

@@ -206,23 +206,23 @@
                             <goal>kafka-connect</goal>
                         </goals>
                         <configuration>
-                            <title>Kafka Connect Nested Set JDBC Sink</title>
+                            <title>JDBC Nested Set Sink Connector</title>
                             <documentationUrl>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink
                             </documentationUrl>
                             <description>
-                                The JDBC nested set sink connector allow you to sink from Apache Kafka nested set
-                                model data consistently to a relational database.
+                                The JDBC nested set sink connector allow to safely sink from Apache Kafka nested set
+                                model (e.g. : shop category tree) data consistently to a relational database.
 
-                                The JDBC sink connector allows you to export nested set data from Kafka topics to
-                                any relational database with a JDBC driver. By using JDBC,
-                                this connector can support a wide variety of databases without requiring a dedicated
-                                connector for each one.
-                                The connector polls nested set data from Kafka to write to the database table based
-                                on the topics subscription.
+                                The nested set model updates will be written initially to an nested set log table and
+                                subsequently they will be merged to the destination nested set table only if they
+                                lead to a valid nested set model.
+
+                                The JDBC Nested Set Sink Connector supports upsert and deletion operations on the
+                                entries of the nested set model.
 
                                 Auto-creation of tables, and limited auto-evolution is also supported.
                             </description>
-                            <logo>logos/jdbc.jpg</logo>
+                            <logo>logos/findinpath.png</logo>
 
                             <supportProviderName>findinpath</supportProviderName>
                             <supportUrl>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/issues
@@ -230,8 +230,8 @@
                             <supportLogo>logos/findinpath.png</supportLogo>
 
                             <ownerUsername>findinpath</ownerUsername>
-                            <ownerType>organization</ownerType>
-                            <ownerName>findinpath</ownerName>
+                            <ownerType>user</ownerType>
+                            <ownerName>Marius Grama</ownerName>
                             <ownerUrl>https://findinpath.com/</ownerUrl>
 
                             <componentTypes>
