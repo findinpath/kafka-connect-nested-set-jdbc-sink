@@ -1,3 +1,9 @@
+[![License](http://img.shields.io/:license-apache%202.0-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![Build Status](https://travis-ci.com/findinpath/kafka-connect-nested-set-jdbc-sink.svg?branch=master)](https://travis-ci.com/findinpath/kafka-connect-nested-set-jdbc-sink)
+
+
+Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
 Kafka Connect Nested Set JDBC Sink Connector
 ===========================================
 
