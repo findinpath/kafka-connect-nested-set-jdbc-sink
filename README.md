@@ -28,6 +28,7 @@ adapted to consistently sink nested set data.
 This is why large portions of the `kafka-connect-jdbc` project code have
 been copied and adapted.
 
+**NOTE** : This connector has been extensively tested against Confluent 5.5.0
 
 ## Nested set model
 
@@ -147,6 +148,25 @@ If the applied updates lead to a valid nested set model configuration, then the 
 table will be updated and the log offset will be set to the latest processed `nested_set_node_log` entry.
 Otherwise the `nested_set_node` table stays in its previous state. 
 
+
+## Installation notes
+
+At the time of this writing, this plugin is not available via Confluent Hub.
+This is why a manual install is needed.
+
+By executing the following command:
+
+```bash
+mvn clean package -DskipTests=true
+```
+
+can be obtained the jar file corresponding to the connector (look for it in the `target` directory).
+
+**NOTE** : This connector has been extensively tested against Confluent 5.5.0 on JDK 8.
+
+Simply copy the packaged jar into `${confluent.home}/share/java/kafka-connect-jdbc` and when restarting
+kafka connect (via `confluent local start`) the _JDBC Nested Set Sync Connector_ will be available
+for usage.
 
 ## Connector configuration
 
