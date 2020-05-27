@@ -40,9 +40,9 @@ described in the following article:
 
 https://www.sitepoint.com/hierarchical-data-database/
 
-![Nested Set Tree](images/nested-set.gif)
+![Nested Set Tree](https://raw.githubusercontent.com/findinpath/kafka-connect-nested-set-jdbc-sink/master/images/nested-set.gif)
 
-![Nested Set Model](images/nested-set-model.png)
+![Nested Set Model](https://raw.githubusercontent.com/findinpath/kafka-connect-nested-set-jdbc-sink/master/images/nested-set-model.png)
 
 
 ##Syncing nested set models over Apache Kafka
@@ -132,7 +132,7 @@ until the outage is fixed or until the nested set model would be manually adjust
 One solution to cope with this sync problem would be to separate 
 the nested set model from what is synced over Apache Kafka. 
 
-![Sink database table diagram](images/sink-database-table-diagram.png)
+![Sink database table diagram](https://raw.githubusercontent.com/findinpath/kafka-connect-nested-set-jdbc-sink/master/images/sink-database-table-diagram.png)
 
 
 In the table diagram above, the `nested_set_node_log` table is an `INSERT only` table
@@ -208,17 +208,17 @@ A sample configuration for the connector is shown below:
 
 Checkout the following resources:
 
-- [TESTING_UPSERT.md](TESTING_UPSERT.md) for getting a grip on how to use the connector for syncing *upserts* (`INSERT`/`UPDATE` sql statements) in the nested set model
-- [TESTING_DELETE.md](TESTING_DELETE.md) for getting a grip on how to use the connector for syncing *deletes* (`DELETE` sql statements) in the nested set model
+- [TESTING_UPSERT.md](https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/blob/master/TESTING_UPSERT.md) for getting a grip on how to use the connector for syncing *upserts* (`INSERT`/`UPDATE` sql statements) in the nested set model
+- [TESTING_DELETE.md](https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/blob/master/TESTING_DELETE.md) for getting a grip on how to use the connector for syncing *deletes* (`DELETE` sql statements) in the nested set model
 
 
 ## End to end tests
 
 This project contains end to end tests for the _kafka-connect-nested-set-jdbc-sink_ connector:
 
-![kafka-connect-nested-set-jdbc-sink End to End Test Architecture](images/end-to-end-test-architecture-diagram.png)
+![kafka-connect-nested-set-jdbc-sink End to End Test Architecture](https://raw.githubusercontent.com/findinpath/kafka-connect-nested-set-jdbc-sink/master/images/end-to-end-test-architecture-diagram.png)
 
-Check [DemoNestedSetSyncTest.java](src/test/java/com/findinpath/connect/nestedset/jdbc/DemoNestedSetSyncTest.java)
+Check [DemoNestedSetSyncTest.java](https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/blob/master/src/test/java/com/findinpath/connect/nestedset/jdbc/DemoNestedSetSyncTest.java)
 for implementation details.
 
 ## Contribute
@@ -229,4 +229,4 @@ Issue Tracker: https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/
 
 ## License
 
-This project is licensed under the [Apache License](LICENSE)
+This project is licensed under the [Apache License](https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink/blob/master/LICENSE)

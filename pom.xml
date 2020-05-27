@@ -233,6 +233,7 @@
                             <ownerType>user</ownerType>
                             <ownerName>Marius Grama</ownerName>
                             <ownerUrl>https://findinpath.com/</ownerUrl>
+                            <ownerLogo>logos/findinpath.png</ownerLogo>
 
                             <componentTypes>
                                 <componentType>sink</componentType>
