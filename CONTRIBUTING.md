@@ -4,7 +4,7 @@ Contributing to JDBC Nested Set Sink Connector
 
 ## Install the tools
 
-The following software is required to work with the Debezium codebase and build it locally:
+The following software is required to work with the JDBC Nested Set Sink Connector codebase and build it locally:
 
 * [Git 2.2.1](https://git-scm.com) or later
 * [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) or [OpenJDK 8](http://openjdk.java.net/projects/jdk8/)
