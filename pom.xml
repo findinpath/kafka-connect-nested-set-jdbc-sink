@@ -7,11 +7,25 @@
     <groupId>com.findinpath</groupId>
     <artifactId>kafka-connect-nested-set-jdbc-sink</artifactId>
     <name>kafka-connect-nested-set-jdbc-sink</name>
+    <description>JDBC Nested Set Sink Connector for Kafka Connect</description>
+    <version>1.0.0</version>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
     <organization>
         <name>findinpath</name>
         <url>https://findinpath.com</url>
     </organization>
-    <version>1.0.0</version>
+    <developers>
+        <developer>
+            <name>Marius Grama</name>
+            <email>findinpath@gmail.com</email>
+        </developer>
+    </developers>
 
     <scm>
         <connection>scm:git:git://github.com/findinpath/kafka-connect-nested-set-jdbc-sink.git
