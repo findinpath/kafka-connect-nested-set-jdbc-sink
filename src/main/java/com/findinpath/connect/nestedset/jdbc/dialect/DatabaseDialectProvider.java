@@ -105,7 +105,7 @@ public abstract class DatabaseDialectProvider {
      *
      * <p>The format of a JDBC URL is defined by the JDBC 4.2 specification as:
      * <pre>
-     * jdbc:&lt;subprotocol>:&lt;subname>
+     * jdbc:subprotocol:subname
      * </pre>
      *
      * <p>where {@code subprotocol} defines the kind of database connectivity mechanism that may be

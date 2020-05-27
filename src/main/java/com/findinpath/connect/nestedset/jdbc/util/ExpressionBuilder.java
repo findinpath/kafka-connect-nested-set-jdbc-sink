@@ -289,6 +289,7 @@ public class ExpressionBuilder {
      * the leading and trailing quotes based upon {@link #setQuoteIdentifiers(QuoteMethod)}.
      *
      * @param name the name to be appended
+     * @param quote whether or not to quote the table name
      * @return this builder to enable methods to be chained; never null
      */
     public ExpressionBuilder appendTableName(String name, QuoteMethod quote) {
@@ -419,6 +420,7 @@ public class ExpressionBuilder {
      * {@link Expressable#appendTo(ExpressionBuilder, boolean)} method. Otherwise, the string
      * representation of the object is appended to the expression.
      *
+     * @param <T>       the type for the object to be appended
      * @param obj       the object to be appended
      * @param transform the transform that should be used on the supplied object to obtain the
      *                  representation that is appended to the expression; may be null

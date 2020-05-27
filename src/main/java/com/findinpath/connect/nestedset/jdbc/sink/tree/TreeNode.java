@@ -24,7 +24,7 @@ import java.util.Objects;
 /**
  * Specific tree node structure containing nested set nodes.
  *
- * @see {@link TreeBuilder#buildTree(List)}
+ * @see TreeBuilder#buildTree(List)
  */
 public class TreeNode<T extends NestedSetNode> {
     private T nestedSetNode;

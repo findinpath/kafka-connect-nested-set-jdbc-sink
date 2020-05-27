@@ -47,7 +47,15 @@ public class DbStructure {
         this.tableDefns = new TableDefinitions(dbDialect);
     }
 
+
     /**
+     * Creates or amends the specified tables
+     *
+     * @param config the configuration of the connector
+     * @param connection connection to the database
+     * @param tableId the nested set model table
+     * @param logTableId nested set model log table
+     * @param fieldsMetadata the metadata of the nested set record
      * @return whether a DDL operation was performed
      * @throws SQLException if a DDL operation was deemed necessary but failed
      */

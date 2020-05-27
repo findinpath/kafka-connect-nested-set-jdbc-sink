@@ -24,10 +24,10 @@ public class StringUtils {
     /**
      * Generate a String by appending all the @{elements}, converted to Strings, delimited by
      *
+     * @param <T>      the type of the elements being joined
      * @param elements list of elements to concatenate
      * @param delim    delimiter to place between each element
      * @return the concatenated string with delimiters
-     * @{delim}.
      */
     public static <T> String join(Iterable<T> elements, String delim) {
         StringBuilder result = new StringBuilder();

@@ -357,6 +357,7 @@ public abstract class GenericDatabaseDialect implements DatabaseDialect {
      * <p>This method can be overridden to exclude certain database tables.
      *
      * @param table the identifier of the table; may be null
+     * @return whether the table should be included or not.
      */
     protected boolean includeTable(TableId table) {
         return true;
