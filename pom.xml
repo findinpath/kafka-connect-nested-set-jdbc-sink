@@ -8,6 +8,7 @@
     <artifactId>kafka-connect-nested-set-jdbc-sink</artifactId>
     <name>kafka-connect-nested-set-jdbc-sink</name>
     <description>JDBC Nested Set Sink Connector for Kafka Connect</description>
+    <url>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink</url>
     <version>1.0.0</version>
 
     <licenses>
