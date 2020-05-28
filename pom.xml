@@ -7,11 +7,26 @@
     <groupId>com.findinpath</groupId>
     <artifactId>kafka-connect-nested-set-jdbc-sink</artifactId>
     <name>kafka-connect-nested-set-jdbc-sink</name>
+    <description>JDBC Nested Set Sink Connector for Kafka Connect</description>
+    <url>https://github.com/findinpath/kafka-connect-nested-set-jdbc-sink</url>
+    <version>1.0.0</version>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
     <organization>
         <name>findinpath</name>
         <url>https://findinpath.com</url>
     </organization>
-    <version>1.0-SNAPSHOT</version>
+    <developers>
+        <developer>
+            <name>Marius Grama</name>
+            <email>findinpath@gmail.com</email>
+        </developer>
+    </developers>
 
     <scm>
         <connection>scm:git:git://github.com/findinpath/kafka-connect-nested-set-jdbc-sink.git
@@ -360,5 +375,29 @@
             </resource>
         </resources>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
