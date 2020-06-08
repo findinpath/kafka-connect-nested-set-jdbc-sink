@@ -62,7 +62,7 @@
         <hamcrest.version>2.2</hamcrest.version>
         <awaitility.version>4.0.2</awaitility.version>
 
-        <testcontainers.version>1.14.2</testcontainers.version>
+        <testcontainers.version>1.14.3</testcontainers.version>
 
         <postgresql-jdbc.version>42.2.11</postgresql-jdbc.version>
         <mysql-jdbc.version>8.0.20</mysql-jdbc.version>
