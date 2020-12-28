@@ -67,7 +67,7 @@
         <postgresql-jdbc.version>42.2.13</postgresql-jdbc.version>
         <mysql-jdbc.version>8.0.20</mysql-jdbc.version>
         <mssql-jdbc.version>8.2.2.jre8</mssql-jdbc.version>
-        <oracle-jdbc.version>18.3.0.0</oracle-jdbc.version>
+        <oracle-jdbc.version>19.9.0.0</oracle-jdbc.version>
         <sqlite-jdbc.version>3.31.1</sqlite-jdbc.version>
 
         <rest-assured.version>4.3.0</rest-assured.version>
