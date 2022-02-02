@@ -64,7 +64,7 @@
 
         <testcontainers.version>1.14.3</testcontainers.version>
 
-        <postgresql-jdbc.version>42.2.13</postgresql-jdbc.version>
+        <postgresql-jdbc.version>42.2.25</postgresql-jdbc.version>
         <mysql-jdbc.version>8.0.20</mysql-jdbc.version>
         <mssql-jdbc.version>8.2.2.jre8</mssql-jdbc.version>
         <oracle-jdbc.version>18.3.0.0</oracle-jdbc.version>
