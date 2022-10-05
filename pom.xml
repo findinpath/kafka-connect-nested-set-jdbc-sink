@@ -71,7 +71,7 @@
         <sqlite-jdbc.version>3.31.1</sqlite-jdbc.version>
 
         <rest-assured.version>4.3.0</rest-assured.version>
-        <jackson.version>2.11.0</jackson.version>
+        <jackson.version>2.12.6.1</jackson.version>
 
     </properties>
 
